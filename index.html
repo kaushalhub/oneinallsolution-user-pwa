@@ -12,12 +12,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#7c77b9" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- API origin if missing at vite build (DigitalOcean static): no trailing slash. Rebuild ships this into dist. -->
+    <meta name="cleanswift-api-base" content="" />
     <title>AO CLEAN</title>
   </head>
   <body>
     <div id="root"></div>
-    <!-- DigitalOcean: if env is missing at build time, add a script *before* this file that sets window.__CS_API_BASE_URL__ (see user-pwa README). -->
+    <!-- Optional: window.__CS_API_BASE_URL__ = 'https://api…'; before the module — see README. -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

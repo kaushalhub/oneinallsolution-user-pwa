@@ -38,7 +38,11 @@ Vite **bakes** `import.meta.env.VITE_API_BASE_URL` when **`npm run build`** runs
 
 **Preferred:** In **App Platform** → your static/web component → **Environment variables**, add `VITE_API_BASE_URL` = `https://your-api.tld` (no trailing slash) with scope **Build time** (and **Run time** if the UI offers both). Trigger a **new deploy** so the build runs again.
 
-**Alternative (no build-time env):** In the **deployed** `index.html`, add **before** the main `script type="module"`:
+**Alternative (no build-time env):** The app resolves API base in this order (`src/lib/api.ts`): build env → `window.__CS_API_BASE_URL__` → **`<meta name="cleanswift-api-base" content="https://your-api.tld">`** in `<head>`.
+
+1. **Meta:** After one deploy that includes the current `user-pwa` bundle, set `<meta name="cleanswift-api-base" content="https://your-api.tld" />` in `index.html` (no trailing slash). Later API host changes only need editing that meta (or redeploying `index.html`), not a full front-end rebuild.
+
+2. **Script:** Before the main module:
 
 ```html
 <script>
@@ -46,7 +50,7 @@ Vite **bakes** `import.meta.env.VITE_API_BASE_URL` when **`npm run build`** runs
 </script>
 ```
 
-The app reads `window.__CS_API_BASE_URL__` in `src/lib/api.ts`. Useful for static site buckets where injecting build env is awkward.
+**If you still see the _old_ error text** mentioning only `user-pwa/.env`, the browser or CDN is serving an **old** `index-….js` — purge cache, bump deploy, or open an incognito window.
 
 **Docker on DO:** pass `ARG`/`ENV VITE_API_BASE_URL=...` before `npm run build` in the image.
 

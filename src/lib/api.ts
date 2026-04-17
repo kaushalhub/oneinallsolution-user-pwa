@@ -14,6 +14,15 @@ function readRuntimeApiOverride(): string {
   return typeof v === 'string' ? normalizeApiOrigin(v) : '';
 }
 
+/** Optional `<meta name="cleanswift-api-base" content="https://api...">` in `index.html` (no rebuild of JS). */
+function readMetaApiOverride(): string {
+  if (typeof document === 'undefined') return '';
+  const el = document.querySelector('meta[name="cleanswift-api-base"]');
+  const c = el?.getAttribute('content');
+  if (typeof c !== 'string') return '';
+  return normalizeApiOrigin(c);
+}
+
 /**
  * True on localhost / LAN (e.g. `vite preview --host`). Public internet hostnames must use env or
  * `window.__CS_API_BASE_URL__`.
@@ -40,23 +49,24 @@ function isLikelyDevOrLanPreview(): boolean {
 }
 
 /**
- * Order: Vite build env → `window.__CS_API_BASE_URL__` (DigitalOcean / static) → dev server → LAN preview
+ * Order: Vite build env → `window.__CS_API_BASE_URL__` → `<meta name="cleanswift-api-base">` → dev → LAN preview
  * fallback → throw on public hosts.
  */
 function resolveApiBaseUrl(): string {
   const fromBuild = normalizeApiOrigin(import.meta.env.VITE_API_BASE_URL || '');
   const fromRuntime = readRuntimeApiOverride();
-  const resolved = fromBuild || fromRuntime;
+  const fromMeta = readMetaApiOverride();
+  const resolved = fromBuild || fromRuntime || fromMeta;
   if (resolved) return resolved;
   if (import.meta.env.DEV) return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
   if (isLikelyDevOrLanPreview()) {
     console.warn(
-      '[cleanswift] No API URL: set VITE_API_BASE_URL at build time, or window.__CS_API_BASE_URL__ before the app loads. Using dev fallback for local/LAN preview only.'
+      '[cleanswift] No API URL: set VITE_API_BASE_URL at build, or meta cleanswift-api-base / window.__CS_API_BASE_URL__. Using dev fallback for local/LAN preview only.'
     );
     return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
   }
   throw new Error(
-    'Set VITE_API_BASE_URL before `npm run build`, or define window.__CS_API_BASE_URL__ in index.html (see user-pwa README — DigitalOcean). Same value as mobile EXPO_PUBLIC_API_BASE_URL.'
+    'API base URL missing: set VITE_API_BASE_URL before `npm run build`, or add <meta name="cleanswift-api-base" content="https://your-api"> in index.html, or window.__CS_API_BASE_URL__. See user-pwa README (DigitalOcean). Same host as EXPO_PUBLIC_API_BASE_URL.'
   );
 }
 
