@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { PwaInstallOffer } from '../components/PwaInstallOffer';
 import { APP_PRODUCT_NAME } from '../constants/branding';
 import { getProfileWithSessionToken } from '../lib/authApi';
 import { clearSession, getSession } from '../lib/session';
@@ -289,9 +288,6 @@ export function ProfilePage() {
                 bg="rgba(88,97,97,0.05)"
                 label={`About ${APP_PRODUCT_NAME}`}
               />
-              <div className="prof-installSlot">
-                <PwaInstallOffer />
-              </div>
               <button type="button" className="prof-logout" onClick={logout}>
                 <IonIcon ionName="log-out-outline" size={18} color="#AC3434" />
                 Logout
@@ -623,12 +619,6 @@ export function ProfilePage() {
           font-size: 12px;
           font-weight: 700;
           margin-top: 2px;
-        }
-        .prof-installSlot {
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-          padding: 4px 0;
         }
         .prof-logout {
           margin-top: 16px;
