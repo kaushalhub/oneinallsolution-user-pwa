@@ -1,0 +1,143 @@
+:root {
+  --cs-font-sans: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif;
+  --cs-primary: #7c77b9;
+  --cs-primary-dark: #5f5a92;
+  --cs-bg-page: #f4f6f8;
+  --cs-text: #0f172a;
+  --cs-muted: #64748b;
+  --cs-safe-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  --cs-safe-top: max(10px, env(safe-area-inset-top, 0px));
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: var(--cs-font-sans);
+  -webkit-tap-highlight-color: transparent;
+  background: #fff;
+  color: var(--cs-text);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+}
+
+.brand-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-upper {
+  text-align: center;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.brand-upper--hero {
+  font-size: 12px;
+  letter-spacing: 5px;
+  margin-bottom: 2px;
+  color: rgba(248, 250, 252, 0.72);
+}
+
+.brand-upper--screen {
+  font-size: 12px;
+  letter-spacing: 4px;
+  margin-bottom: 2px;
+}
+
+.brand-upper--compact {
+  font-size: 11px;
+  letter-spacing: 3px;
+  margin-bottom: 2px;
+}
+
+.brand-lower {
+  text-align: center;
+  font-weight: 800;
+  color: var(--cs-primary);
+}
+
+.brand-lower--hero {
+  font-size: 36px;
+  letter-spacing: -1.2px;
+  line-height: 42px;
+  color: #5af2c6;
+}
+
+.brand-lower--screen {
+  font-size: 34px;
+  letter-spacing: -1px;
+  line-height: 40px;
+}
+
+.brand-lower--compact {
+  font-size: 28px;
+  letter-spacing: -0.8px;
+  line-height: 34px;
+  color: #7c77b9;
+}
+
+.brand-bar {
+  max-width: 168px;
+  min-width: 0;
+}
+
+.brand-bar-text {
+  font-size: 15px;
+  font-weight: 800;
+  color: #5f5a92;
+  letter-spacing: -0.3px;
+}
+
+.pwa-page {
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+@keyframes cs-pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes cs-pin-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes cs-splash-bar {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
