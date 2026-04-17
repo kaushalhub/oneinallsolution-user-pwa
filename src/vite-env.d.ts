@@ -1,7 +1,15 @@
 /// <reference types="vite/client" />
 
+interface Window {
+  /**
+   * Optional runtime API origin (no trailing slash). Set in `index.html` before the app bundle
+   * when the host cannot inject `VITE_API_BASE_URL` at build time (e.g. some DigitalOcean static flows).
+   */
+  __CS_API_BASE_URL__?: string;
+}
+
 interface ImportMetaEnv {
-  readonly VITE_API_BASE_URL: string;
+  readonly VITE_API_BASE_URL?: string;
   /**
    * Optional — Google Maps key: enable Maps Embed API (confirmation iframe), Maps JavaScript API +
    * Geocoding API (address form: pin on map + auto-fill).

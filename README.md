@@ -32,6 +32,24 @@ cp .env.example .env
 | `npm run test`                            | Vitest (unit tests)                         |
 | `npm run check`                           | Lint + format + test + build (release gate) |
 
+## DigitalOcean — same `VITE_API_BASE_URL` error on every deploy
+
+Vite **bakes** `import.meta.env.VITE_API_BASE_URL` when **`npm run build`** runs. If DO runs the build **without** that variable (e.g. it is only set as “runtime” in the UI, or not passed into the build step), production JS will keep throwing — it will look like “nothing changed” after you edit `.env` locally.
+
+**Preferred:** In **App Platform** → your static/web component → **Environment variables**, add `VITE_API_BASE_URL` = `https://your-api.tld` (no trailing slash) with scope **Build time** (and **Run time** if the UI offers both). Trigger a **new deploy** so the build runs again.
+
+**Alternative (no build-time env):** In the **deployed** `index.html`, add **before** the main `script type="module"`:
+
+```html
+<script>
+  window.__CS_API_BASE_URL__ = 'https://your-api.tld';
+</script>
+```
+
+The app reads `window.__CS_API_BASE_URL__` in `src/lib/api.ts`. Useful for static site buckets where injecting build env is awkward.
+
+**Docker on DO:** pass `ARG`/`ENV VITE_API_BASE_URL=...` before `npm run build` in the image.
+
 ## Architecture notes
 
 - **API client** (`src/lib/api.ts`): timeouts, JSON errors, optional `access_token` query on some GETs for reverse-proxy compatibility, **401 with Bearer** clears session and redirects to `/login?reason=session` except on public auth routes (`src/lib/authWall.ts`).

@@ -3,42 +3,60 @@ import { clearSession } from './session';
 
 const DEV_FALLBACK_API_BASE_URL = 'https://api.oneinallsolution.com';
 
+function normalizeApiOrigin(raw: string): string {
+  return raw.trim().replace(/\/+$/, '');
+}
+
+/** Runtime override for hosts where env is not available at `vite build` time (see README). */
+function readRuntimeApiOverride(): string {
+  if (typeof window === 'undefined') return '';
+  const v = window.__CS_API_BASE_URL__;
+  return typeof v === 'string' ? normalizeApiOrigin(v) : '';
+}
+
 /**
- * True when the UI is opened on a machine-local / LAN address (typical `vite preview`, including `--host`).
- * Public deploys use a real DNS name — those must set `VITE_API_BASE_URL`.
+ * True on localhost / LAN (e.g. `vite preview --host`). Public internet hostnames must use env or
+ * `window.__CS_API_BASE_URL__`.
  */
-// function isLikelyDevOrLanPreview(): boolean {
-//   if (typeof window === 'undefined') return false;
-//   const h = window.location.hostname.toLowerCase();
-//   if (h === 'localhost' || h === '127.0.0.1' || h === '' || h === '0.0.0.0') return true;
-//   if (h === '[::1]' || h === '::1') return true;
-//   if (h.endsWith('.local')) return true;
+function isLikelyDevOrLanPreview(): boolean {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname.toLowerCase();
+  if (h === 'localhost' || h === '127.0.0.1' || h === '' || h === '0.0.0.0') return true;
+  if (h === '[::1]' || h === '::1') return true;
+  if (h.endsWith('.local')) return true;
 
-//   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-//   const m = h.match(ipv4);
-//   if (!m) return false;
-//   const a = Number(m[1]);
-//   const b = Number(m[2]);
-//   if (![a, b].every((n) => n >= 0 && n <= 255)) return false;
-//   if (a === 10) return true;
-//   if (a === 127) return true;
-//   if (a === 192 && b === 168) return true;
-//   if (a === 172 && b >= 16 && b <= 31) return true;
-//   if (a === 100 && b >= 64 && b <= 127) return true;
-//   return false;
-// }
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const m = h.match(ipv4);
+  if (!m) return false;
+  const a = Number(m[1]);
+  const b = Number(m[2]);
+  if (![a, b].every((n) => n >= 0 && n <= 255)) return false;
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  return false;
+}
 
 /**
- * `vite preview` runs as production (`DEV` false). Without `VITE_API_BASE_URL`, use fallback on
- * localhost / LAN so the app still mounts; public hosts must set env.
+ * Order: Vite build env → `window.__CS_API_BASE_URL__` (DigitalOcean / static) → dev server → LAN preview
+ * fallback → throw on public hosts.
  */
 function resolveApiBaseUrl(): string {
-  const fromEnv = ('https://api.oneinallsolution.com').trim().replace(/\/+$/, '');
-  if (fromEnv) return fromEnv;
+  const fromBuild = normalizeApiOrigin(import.meta.env.VITE_API_BASE_URL || '');
+  const fromRuntime = readRuntimeApiOverride();
+  const resolved = fromBuild || fromRuntime;
+  if (resolved) return resolved;
   if (import.meta.env.DEV) return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
-
+  if (isLikelyDevOrLanPreview()) {
+    console.warn(
+      '[cleanswift] No API URL: set VITE_API_BASE_URL at build time, or window.__CS_API_BASE_URL__ before the app loads. Using dev fallback for local/LAN preview only.'
+    );
+    return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
+  }
   throw new Error(
-    'Set VITE_API_BASE_URL in user-pwa/.env for production builds (same host as your mobile EXPO_PUBLIC_API_BASE_URL).'
+    'Set VITE_API_BASE_URL before `npm run build`, or define window.__CS_API_BASE_URL__ in index.html (see user-pwa README — DigitalOcean). Same value as mobile EXPO_PUBLIC_API_BASE_URL.'
   );
 }
 
