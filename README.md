@@ -14,11 +14,11 @@ cd user-pwa
 cp .env.example .env
 ```
 
-| Variable                   | Required                | Purpose                                                                                                                                                                                                                          |
-| -------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_API_BASE_URL`        | **Yes** on real deploys | Backend API origin (no trailing slash). `vite dev` and **`vite preview` on localhost** use a temporary fallback if unset — see `src/lib/api.ts`. On any non-localhost host without this var, the app will not start (by design). |
-| `VITE_GOOGLE_MAPS_API_KEY` | No                      | Maps Embed (confirmation), Maps JS + Geocoding (address pin / auto-fill). Enable the matching APIs in Google Cloud.                                                                                                              |
-| `VITE_SENTRY_DSN`          | No                      | Production error reporting (`@sentry/react`). Omit locally to skip.                                                                                                                                                              |
+| Variable                   | Required                  | Purpose                                                                                                                                                                                                                                     |
+| -------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL`        | **Yes** on public deploys | Backend API origin (no trailing slash). `vite dev` and **`vite preview` on localhost / private LAN** (e.g. `192.168.x.x` with `preview --host`) use a fallback if unset — see `src/lib/api.ts`. Public DNS without this var will not start. |
+| `VITE_GOOGLE_MAPS_API_KEY` | No                        | Maps Embed (confirmation), Maps JS + Geocoding (address pin / auto-fill). Enable the matching APIs in Google Cloud.                                                                                                                         |
+| `VITE_SENTRY_DSN`          | No                        | Production error reporting (`@sentry/react`). Omit locally to skip.                                                                                                                                                                         |
 
 ## Scripts
 
