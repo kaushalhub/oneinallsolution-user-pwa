@@ -3,10 +3,26 @@ import { clearSession } from './session';
 
 const DEV_FALLBACK_API_BASE_URL = 'https://api.oneinallsolution.com';
 
+function isLocalPreviewHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname;
+  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+}
+
+/**
+ * `vite preview` runs as production (`DEV` false). Without `VITE_API_BASE_URL` the old code threw here
+ * and the app never mounted (blank page). Localhost preview falls back like dev; real hosts must set env.
+ */
 function resolveApiBaseUrl(): string {
   const fromEnv = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
   if (fromEnv) return fromEnv;
   if (import.meta.env.DEV) return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
+  if (isLocalPreviewHost()) {
+    console.warn(
+      '[cleanswift] VITE_API_BASE_URL is not set — using built-in dev API URL for localhost preview only. Add VITE_API_BASE_URL to .env for production deploys.'
+    );
+    return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
+  }
   throw new Error(
     'Set VITE_API_BASE_URL in user-pwa/.env for production builds (same host as your mobile EXPO_PUBLIC_API_BASE_URL).'
   );
