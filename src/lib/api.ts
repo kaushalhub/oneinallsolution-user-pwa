@@ -33,15 +33,10 @@ function isLikelyDevOrLanPreview(): boolean {
  * localhost / LAN so the app still mounts; public hosts must set env.
  */
 function resolveApiBaseUrl(): string {
-  const fromEnv = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  const fromEnv = ('https://api.oneinallsolution.com').trim().replace(/\/+$/, '');
   if (fromEnv) return fromEnv;
   if (import.meta.env.DEV) return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
-  if (isLikelyDevOrLanPreview()) {
-    console.warn(
-      '[cleanswift] VITE_API_BASE_URL is not set — using built-in dev API URL for local/LAN preview. Set VITE_API_BASE_URL in .env and rebuild before production.'
-    );
-    return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
-  }
+  
   throw new Error(
     'Set VITE_API_BASE_URL in user-pwa/.env for production builds (same host as your mobile EXPO_PUBLIC_API_BASE_URL).'
   );
