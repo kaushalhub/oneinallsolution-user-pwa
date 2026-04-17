@@ -7,26 +7,26 @@ const DEV_FALLBACK_API_BASE_URL = 'https://api.oneinallsolution.com';
  * True when the UI is opened on a machine-local / LAN address (typical `vite preview`, including `--host`).
  * Public deploys use a real DNS name — those must set `VITE_API_BASE_URL`.
  */
-function isLikelyDevOrLanPreview(): boolean {
-  if (typeof window === 'undefined') return false;
-  const h = window.location.hostname.toLowerCase();
-  if (h === 'localhost' || h === '127.0.0.1' || h === '' || h === '0.0.0.0') return true;
-  if (h === '[::1]' || h === '::1') return true;
-  if (h.endsWith('.local')) return true;
+// function isLikelyDevOrLanPreview(): boolean {
+//   if (typeof window === 'undefined') return false;
+//   const h = window.location.hostname.toLowerCase();
+//   if (h === 'localhost' || h === '127.0.0.1' || h === '' || h === '0.0.0.0') return true;
+//   if (h === '[::1]' || h === '::1') return true;
+//   if (h.endsWith('.local')) return true;
 
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-  const m = h.match(ipv4);
-  if (!m) return false;
-  const a = Number(m[1]);
-  const b = Number(m[2]);
-  if (![a, b].every((n) => n >= 0 && n <= 255)) return false;
-  if (a === 10) return true;
-  if (a === 127) return true;
-  if (a === 192 && b === 168) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 100 && b >= 64 && b <= 127) return true;
-  return false;
-}
+//   const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+//   const m = h.match(ipv4);
+//   if (!m) return false;
+//   const a = Number(m[1]);
+//   const b = Number(m[2]);
+//   if (![a, b].every((n) => n >= 0 && n <= 255)) return false;
+//   if (a === 10) return true;
+//   if (a === 127) return true;
+//   if (a === 192 && b === 168) return true;
+//   if (a === 172 && b >= 16 && b <= 31) return true;
+//   if (a === 100 && b >= 64 && b <= 127) return true;
+//   return false;
+// }
 
 /**
  * `vite preview` runs as production (`DEV` false). Without `VITE_API_BASE_URL`, use fallback on
@@ -36,7 +36,7 @@ function resolveApiBaseUrl(): string {
   const fromEnv = ('https://api.oneinallsolution.com').trim().replace(/\/+$/, '');
   if (fromEnv) return fromEnv;
   if (import.meta.env.DEV) return DEV_FALLBACK_API_BASE_URL.replace(/\/+$/, '');
-  
+
   throw new Error(
     'Set VITE_API_BASE_URL in user-pwa/.env for production builds (same host as your mobile EXPO_PUBLIC_API_BASE_URL).'
   );
