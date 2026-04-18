@@ -1,0 +1,242 @@
+/* PWA install bottom sheet — no Tailwind; safe for minimal CI installs. */
+.pip-root {
+  position: fixed;
+  inset: 0;
+  z-index: 280;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-family: var(--cs-font-sans, system-ui, sans-serif);
+}
+
+.pip-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.5);
+  opacity: 0;
+  backdrop-filter: blur(0);
+  transition:
+    opacity 320ms ease-out,
+    backdrop-filter 320ms ease-out;
+}
+
+.pip-backdrop--open {
+  opacity: 1;
+  backdrop-filter: blur(2px);
+}
+
+.pip-sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 32rem;
+  margin: 0;
+  border-radius: 22px 22px 0 0;
+  background: #fff;
+  padding: 12px 20px max(20px, env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -16px 48px rgba(15, 23, 42, 0.18);
+  transform: translateY(2rem);
+  opacity: 0;
+  transition:
+    transform 320ms ease-out,
+    opacity 320ms ease-out;
+}
+
+.pip-sheet--open {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.pip-handle {
+  width: 2.5rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  margin: 0 auto 12px;
+}
+
+.pip-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.pip-iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 12px;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, #f5f3ff, #e0e7ff);
+  box-shadow: 0 0 0 1px #f1f5f9;
+}
+
+.pip-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+
+.pip-title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #0f172a;
+}
+
+.pip-desc {
+  margin: 0 0 4px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.pip-steps {
+  width: 100%;
+  max-width: 24rem;
+  margin: 12px 0 20px;
+  padding: 12px 16px;
+  border-radius: 1rem;
+  background: #f8fafc;
+  box-shadow: 0 0 0 1px #f1f5f9;
+  text-align: left;
+  list-style: none;
+}
+
+.pip-step {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.pip-step:last-child {
+  margin-bottom: 0;
+}
+
+.pip-stepNum {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 2px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4f46e5;
+  box-shadow: 0 0 0 1px #e2e8f0;
+}
+
+.pip-step strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pip-chromeNote {
+  width: 100%;
+  max-width: 24rem;
+  margin: 12px 0 20px;
+  padding: 12px 16px;
+  border-radius: 1rem;
+  background: #fffbeb;
+  box-shadow: 0 0 0 1px #fef3c7;
+  text-align: left;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #422006;
+}
+
+.pip-chromeNote-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: #422006;
+}
+
+.pip-chromeNote p {
+  margin: 8px 0 0;
+  color: rgba(66, 32, 6, 0.92);
+}
+
+.pip-chromiumHint {
+  margin: 4px 0 20px;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.pip-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.pip-primary {
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #9a95ca, #7c77b9);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: transform 0.12s ease;
+}
+
+.pip-primary:hover:not(:disabled) {
+  filter: brightness(1.02);
+}
+
+.pip-primary:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.pip-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pip-secondary {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.12s ease;
+}
+
+.pip-secondary:hover {
+  background: #f8fafc;
+}
+
+.pip-secondary:active {
+  transform: scale(0.99);
+}
+
+.nowrap {
+  white-space: nowrap;
+}

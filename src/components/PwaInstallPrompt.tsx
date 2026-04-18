@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import './PwaInstallPrompt.css';
+
 /** Chromium `beforeinstallprompt` event (not in standard TypeScript DOM lib). */
 export type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -242,9 +244,6 @@ export function PwaInstallPrompt({
 
   if (standalone || !sheetOpen || !variant) return null;
 
-  const backdropCls = motionOpen ? 'opacity-100 backdrop-blur-[2px]' : 'opacity-0 backdrop-blur-0';
-  const sheetCls = motionOpen ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0';
-
   const onPrimary =
     variant === 'chromium'
       ? () => void onInstallChromium()
@@ -253,75 +252,71 @@ export function PwaInstallPrompt({
         : dismiss;
 
   return (
-    <div
-      className="fixed inset-0 z-[280] flex items-end justify-center font-sans"
-      role="presentation"
-    >
+    <div className="pip-root" role="presentation">
       <button
         type="button"
         aria-label="Close install prompt"
-        className={`absolute inset-0 bg-slate-900/50 transition-all duration-320 ease-out ${backdropCls}`}
+        className={`pip-backdrop${motionOpen ? ' pip-backdrop--open' : ''}`}
         onClick={onBackdropPointerDown}
       />
       <div
-        className={`relative z-[1] m-0 w-full max-w-lg rounded-t-[22px] bg-white px-5 pb-[max(20px,env(safe-area-inset-bottom,0px))] pt-3 shadow-[0_-16px_48px_rgba(15,23,42,0.18)] transition-all duration-320 ease-out ${sheetCls}`}
+        className={`pip-sheet${motionOpen ? ' pip-sheet--open' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="pwa-install-title"
       >
-        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-200" aria-hidden />
-        <div className="flex flex-col items-center text-center">
-          <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-violet-50 to-indigo-100 ring-1 ring-slate-100">
-            <img src={iconSrc} alt="" className="h-14 w-14 rounded-xl object-cover" width={56} height={56} />
+        <div className="pip-handle" aria-hidden />
+        <div className="pip-body">
+          <div className="pip-iconWrap">
+            <img src={iconSrc} alt="" className="pip-icon" width={56} height={56} />
           </div>
-          <h2 id="pwa-install-title" className="mb-2 text-xl font-extrabold tracking-tight text-slate-900">
+          <h2 id="pwa-install-title" className="pip-title">
             {appName}
           </h2>
-          <p className="mb-1 text-[15px] leading-relaxed text-slate-600">{appDescription}</p>
+          <p className="pip-desc">{appDescription}</p>
 
           {variant === 'ios_safari' && (
-            <ol className="mb-5 mt-3 w-full max-w-sm space-y-2 rounded-2xl bg-slate-50 px-4 py-3 text-left text-sm text-slate-700 ring-1 ring-slate-100">
-              <li className="flex gap-2">
-                <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-indigo-600 ring-1 ring-slate-200">
+            <ol className="pip-steps">
+              <li className="pip-step">
+                <span className="pip-stepNum" aria-hidden>
                   1
                 </span>
                 <span>
-                  Tap the <strong className="font-semibold text-slate-900">Share</strong> icon{' '}
-                  <span className="whitespace-nowrap">(square with arrow up)</span> in the toolbar.
+                  Tap the <strong>Share</strong> icon <span className="nowrap">(square with arrow up)</span> in the
+                  toolbar.
                 </span>
               </li>
-              <li className="flex gap-2">
-                <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-indigo-600 ring-1 ring-slate-200">
+              <li className="pip-step">
+                <span className="pip-stepNum" aria-hidden>
                   2
                 </span>
                 <span>
-                  Scroll and tap <strong className="font-semibold text-slate-900">Add to Home Screen</strong>, then
-                  confirm.
+                  Scroll and tap <strong>Add to Home Screen</strong>, then confirm.
                 </span>
               </li>
             </ol>
           )}
 
           {variant === 'ios_chrome' && (
-            <div className="mb-5 mt-3 w-full max-w-sm rounded-2xl bg-amber-50 px-4 py-3 text-left text-sm leading-relaxed text-amber-950 ring-1 ring-amber-100">
-              <p className="font-semibold text-amber-950">Open this page in Safari to install the app.</p>
-              <p className="mt-1 text-amber-900/90">
-                Chrome on iOS cannot add PWAs to the home screen. Copy the link, open it in Safari, then use Share →
-                Add to Home Screen.
+            <div className="pip-chromeNote">
+              <p className="pip-chromeNote-title">Open this page in Safari to install the app.</p>
+              <p>
+                Chrome on iOS cannot add PWAs to the home screen. Copy the link, open it in Safari, then use Share → Add
+                to Home Screen.
               </p>
             </div>
           )}
 
           {variant === 'chromium' && (
-            <p className="mb-5 mt-1 text-sm text-slate-500">
+            <p className="pip-chromiumHint">
               When you install, your browser may ask you to confirm — choose Add or Install to continue.
             </p>
           )}
 
-          <div className="flex w-full flex-col gap-2.5">
+          <div className="pip-actions">
             <button
               type="button"
-              className="min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-[#9a95ca] to-[#7c77b9] text-base font-extrabold text-white shadow-sm transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              className="pip-primary"
               onClick={onPrimary}
               disabled={variant === 'chromium' && !deferredPrompt}
             >
@@ -333,11 +328,7 @@ export function PwaInstallPrompt({
                     : 'Copy page link'
                   : 'Got it'}
             </button>
-            <button
-              type="button"
-              className="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-white text-[15px] font-bold text-slate-600 transition hover:bg-slate-50 active:scale-[0.99]"
-              onClick={dismiss}
-            >
+            <button type="button" className="pip-secondary" onClick={dismiss}>
               Cancel
             </button>
           </div>
