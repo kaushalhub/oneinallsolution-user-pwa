@@ -42,14 +42,14 @@ describe('apiRequest', () => {
       })
     );
     vi.stubGlobal('location', {
-      pathname: '/cart',
-      href: 'http://localhost/cart',
+      pathname: '/payment-options',
+      href: 'http://localhost/payment-options',
       assign: assignMock,
       replace: vi.fn(),
     } as unknown as Location);
 
     const { apiRequest } = await import('./api');
-    await expect(apiRequest('/cart', { token: 'expired-token' })).rejects.toThrow();
+    await expect(apiRequest('/payment/verify', { token: 'expired-token' })).rejects.toThrow();
     expect(vi.mocked(clearSession)).toHaveBeenCalled();
     expect(assignMock).toHaveBeenCalledWith('/login?reason=session');
   });

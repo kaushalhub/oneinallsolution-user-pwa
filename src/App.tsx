@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { RequireAuth } from './components/RequireAuth';
@@ -27,35 +27,40 @@ import { ServiceDetailPage } from './pages/ServiceDetailPage';
 import { SplashPage } from './pages/SplashPage';
 import { WalletPage } from './pages/WalletPage';
 import { WalletTopupPage } from './pages/WalletTopupPage';
-import { getSession } from './lib/session';
 
 export default function App() {
-  useLocation();
-  const isLoggedIn = Boolean(getSession()?.token);
-
   return (
     <CurrentLocationProvider>
       <CatalogRegionProvider>
         <CartProvider>
           <>
+            <PwaInstallPrompt
+              appName="Install App"
+              appDescription="Add AO CLEAN to your device for a faster, full-screen experience."
+              iconSrc="/pwa-192.png"
+            />
             <Routes>
               <Route path="/" element={<SplashPage />} />
               <Route path="/location" element={<LocationGatePage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/otp" element={<OTPPage />} />
-              <Route element={<RequireAuth />}>
-                <Route path="/tabs" element={<MainTabLayout />}>
-                  <Route index element={<Navigate to="home" replace />} />
-                  <Route path="home" element={<HomePage />} />
+              {/* Home tab is public (browse without login); other tabs stay behind RequireAuth. */}
+              <Route path="/tabs" element={<MainTabLayout />}>
+                <Route index element={<Navigate to="home" replace />} />
+                <Route path="home" element={<HomePage />} />
+                <Route element={<RequireAuth />}>
                   <Route path="bookings" element={<BookingsPage />} />
                   <Route path="wallet" element={<WalletPage />} />
                   <Route path="profile" element={<ProfilePage />} />
                 </Route>
-                <Route path="/category/:categoryKey" element={<CategoryServicesPage />} />
-                <Route path="/service/:slug" element={<ServiceDetailPage />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/booking" element={<BookingPage />} />
+              </Route>
+              {/* Browse + basket + booking details without login; payment step requires auth. */}
+              <Route path="/category/:categoryKey" element={<CategoryServicesPage />} />
+              <Route path="/service/:slug" element={<ServiceDetailPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/booking" element={<BookingPage />} />
+              <Route element={<RequireAuth />}>
                 <Route path="/payment-options" element={<PaymentOptionsPage />} />
                 <Route path="/confirmation" element={<ConfirmationPage />} />
                 <Route path="/rate-booking/:bookingId" element={<RateBookingPage />} />
@@ -67,12 +72,6 @@ export default function App() {
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-            <PwaInstallPrompt
-              isLoggedIn={isLoggedIn}
-              appName="Install App"
-              appDescription="Add AO CLEAN to your device for a faster, full-screen experience."
-              iconSrc="/pwa-192.png"
-            />
           </>
         </CartProvider>
       </CatalogRegionProvider>

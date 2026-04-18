@@ -42,7 +42,7 @@ export function OnboardingPage() {
       <div className="onb-gradient" />
       <div className="onb-safe" style={{ paddingLeft: H_PAD, paddingRight: H_PAD }}>
         <div className="onb-top">
-          <button type="button" className="onb-skip" onClick={() => navigate('/login')}>
+          <button type="button" className="onb-skip" onClick={() => navigate('/tabs/home')}>
             Skip
           </button>
         </div>
@@ -101,7 +101,7 @@ export function OnboardingPage() {
             ))}
           </div>
 
-          <button type="button" className="onb-cta" onClick={() => navigate('/login')}>
+          <button type="button" className="onb-cta" onClick={() => navigate('/tabs/home')}>
             Get Started
           </button>
           <button type="button" className="onb-login-row" onClick={() => navigate('/login')}>

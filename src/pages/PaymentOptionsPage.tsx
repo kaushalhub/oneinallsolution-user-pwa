@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { HostedPaymentFrame } from '../components/HostedPaymentFrame';
@@ -8,6 +8,11 @@ import { finishOnlineBooking } from '../lib/finishOnlineBooking';
 import { createBooking, type CreateBookingBody } from '../lib/booking';
 import { createPaymentOrder, verifyPaymentOrder } from '../lib/paymentApi';
 import { clearPendingPay, readPendingPay, savePendingPay } from '../lib/paymentPending';
+import {
+  clearPendingPaymentOptionsState,
+  isValidPaymentOptionsState,
+  readPendingPaymentOptionsState,
+} from '../lib/pendingPaymentOptionsState';
 import { getSession } from '../lib/session';
 import { fetchWalletBalance } from '../lib/wallet';
 import type { PaymentOptionsLocationState } from '../types/bookingFlow';
@@ -53,7 +58,7 @@ function paymentSetupAlertBody(err: unknown): string {
 export function PaymentOptionsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const p = location.state as PaymentOptionsLocationState | null;
+  const [checkout, setCheckout] = useState<PaymentOptionsLocationState | null | undefined>(undefined);
   const { clearCart } = useCart();
 
   const [payKind, setPayKind] = useState<PayKind>('online');
@@ -70,11 +75,30 @@ export function PaymentOptionsPage() {
   const bookingPayVerifyLock = useRef(false);
   const onlineBookingCompletedRef = useRef(false);
 
+  useLayoutEffect(() => {
+    const s = location.state as PaymentOptionsLocationState | null;
+    if (isValidPaymentOptionsState(s)) {
+      clearPendingPaymentOptionsState();
+      setCheckout(s);
+      return;
+    }
+    const pending = readPendingPaymentOptionsState();
+    if (isValidPaymentOptionsState(pending)) {
+      setCheckout(pending);
+      clearPendingPaymentOptionsState();
+      return;
+    }
+    setCheckout(null);
+  }, [location.state, location.key]);
+
+  const p = checkout === undefined ? null : checkout;
+
   useEffect(() => {
-    if (!p?.address) {
+    if (checkout === undefined) return;
+    if (!isValidPaymentOptionsState(checkout)) {
       navigate('/tabs/home', { replace: true });
     }
-  }, [navigate, p]);
+  }, [checkout, navigate]);
 
   const multi = Boolean(p?.multi);
   const cartLines = p?.cartLines;
@@ -381,7 +405,8 @@ export function PaymentOptionsPage() {
           <IonIcon ionName="chevron-back" size={24} color="#0f172a" />
         </button>
         <div>
-          <h1 className="pay-title">Payment options</h1>
+          <div className="pay-kicker">Step 2 of 2 · Pay now</div>
+          <h1 className="pay-title">Payment</h1>
           <p className="pay-sub">{subtitleParts.join(' · ')}</p>
         </div>
       </header>
@@ -653,8 +678,15 @@ export function PaymentOptionsPage() {
           align-items: center;
           justify-content: center;
         }
+        .pay-kicker {
+          font-size: 11px;
+          font-weight: 800;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
         .pay-title {
-          margin: 0;
+          margin: 4px 0 0;
           font-size: 18px;
           font-weight: 800;
           color: #0f172a;

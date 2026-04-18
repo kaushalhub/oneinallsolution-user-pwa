@@ -9,8 +9,6 @@ export type BeforeInstallPromptEvent = Event & {
 };
 
 export type PwaInstallPromptProps = {
-  /** When true, user is treated as "after login" for prompt eligibility. */
-  isLoggedIn?: boolean;
   /** Sheet title (default matches product copy). */
   appName?: string;
   /** Supporting line under the title. */
@@ -105,7 +103,6 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
 type InstallVariant = 'chromium' | 'ios_safari' | 'ios_chrome';
 
 export function PwaInstallPrompt({
-  isLoggedIn = false,
   appName = DEFAULT_APP_NAME,
   appDescription = DEFAULT_DESCRIPTION,
   iconSrc = DEFAULT_ICON,
@@ -125,10 +122,11 @@ export function PwaInstallPrompt({
 
   const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Login-independent: 2+ visits or 30s on site (works on public routes before auth). */
   const eligible = useMemo(() => {
     if (standalone || dismissed) return false;
-    return visitCount >= 2 || isLoggedIn || timeOk;
-  }, [standalone, dismissed, visitCount, isLoggedIn, timeOk]);
+    return visitCount >= 2 || timeOk;
+  }, [standalone, dismissed, visitCount, timeOk]);
 
   const variant: InstallVariant | null = useMemo(() => {
     if (standalone || dismissed) return null;

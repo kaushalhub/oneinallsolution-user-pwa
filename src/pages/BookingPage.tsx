@@ -5,6 +5,7 @@ import { Colors } from '../constants/theme';
 import { useCart } from '../context/CartContext';
 import { validateCoupon, type ValidateCouponResponse } from '../lib/coupon';
 import { getSession } from '../lib/session';
+import { savePendingPaymentOptionsState } from '../lib/pendingPaymentOptionsState';
 import {
   addUserAddress,
   fetchUserAddresses,
@@ -199,29 +200,60 @@ export function BookingPage() {
   };
 
   const handleContinueToPayment = () => {
-    if (!token) {
-      setAddressErr('Please log in to place a booking.');
-      return;
-    }
-    if (!selectedAddr) {
-      setAddressErr('Add or select a service address.');
-      return;
-    }
     if (!selectedDate) {
       setAddressErr('Please choose a date.');
       return;
     }
     const timeNorm = selectedTime.replace(/\n/g, ' ').trim();
-    const addressPayload = {
-      label: selectedAddr.label,
-      line1: selectedAddr.line1,
-      line2: selectedAddr.line2,
-      city: selectedAddr.city,
-      state: selectedAddr.state,
-      pincode: selectedAddr.pincode,
-      ...(typeof selectedAddr.lat === 'number' ? { lat: selectedAddr.lat } : {}),
-      ...(typeof selectedAddr.lng === 'number' ? { lng: selectedAddr.lng } : {}),
+
+    let addressPayload: {
+      label?: string;
+      line1: string;
+      line2?: string;
+      city?: string;
+      state?: string;
+      pincode?: string;
+      lat?: number;
+      lng?: number;
     };
+    let addressSummary: string;
+
+    if (token && selectedAddr) {
+      addressPayload = {
+        label: selectedAddr.label,
+        line1: selectedAddr.line1,
+        line2: selectedAddr.line2,
+        city: selectedAddr.city,
+        state: selectedAddr.state,
+        pincode: selectedAddr.pincode,
+        ...(typeof selectedAddr.lat === 'number' ? { lat: selectedAddr.lat } : {}),
+        ...(typeof selectedAddr.lng === 'number' ? { lng: selectedAddr.lng } : {}),
+      };
+      addressSummary = formatAddressOneLine(selectedAddr);
+    } else if (!token) {
+      if (!formLine1.trim()) {
+        setAddressErr('Please enter address line 1.');
+        return;
+      }
+      if (!formCity.trim() || !formState.trim() || !formPin.trim()) {
+        setAddressErr('Please fill city, state and PIN.');
+        return;
+      }
+      addressPayload = {
+        label: formLabel.trim() || 'Home',
+        line1: formLine1.trim(),
+        line2: formLine2.trim(),
+        city: formCity.trim(),
+        state: formState.trim(),
+        pincode: formPin.trim(),
+      };
+      addressSummary = [addressPayload.line1, addressPayload.line2, [addressPayload.city, addressPayload.state].filter(Boolean).join(', '), addressPayload.pincode]
+        .filter((x) => x && String(x).trim())
+        .join(', ');
+    } else {
+      setAddressErr('Add or select a service address.');
+      return;
+    }
 
     const payload: PaymentOptionsLocationState = {
       serviceLineTitle,
@@ -239,9 +271,16 @@ export function BookingPage() {
       selectedDate,
       selectedTime: timeNorm,
       address: addressPayload,
-      addressSummary: formatAddressOneLine(selectedAddr),
+      addressSummary,
       itemCount: multi ? cartLines.length : 1,
     };
+
+    if (!token) {
+      setAddressErr(null);
+      savePendingPaymentOptionsState(payload);
+      navigate('/login', { state: { from: '/payment-options' } });
+      return;
+    }
     navigate('/payment-options', { state: payload });
   };
 
@@ -256,7 +295,9 @@ export function BookingPage() {
   const headerLocationText = selectedAddr
     ? [selectedAddr.city, selectedAddr.state].filter(Boolean).join(', ') ||
       formatAddressOneLine(selectedAddr).slice(0, 28)
-    : 'Add service address';
+    : !token && (formCity.trim() || formState.trim())
+      ? [formCity.trim(), formState.trim()].filter(Boolean).join(', ')
+      : 'Add service address';
 
   return (
     <div className="bk-page pwa-page">
@@ -265,8 +306,9 @@ export function BookingPage() {
           <IonIcon ionName="chevron-back" size={22} color="#1e293b" />
         </button>
         <div>
-          <div className="bk-kicker">Checkout</div>
-          <h1 className="bk-title">Confirm & pay</h1>
+          <div className="bk-kicker">Step 1 of 2</div>
+          <h1 className="bk-title">Address &amp; schedule</h1>
+          <p className="bk-lead">Add your service address and pick a slot — you’ll pay on the next screen.</p>
         </div>
       </header>
       <div className="bk-loc-strip">
@@ -294,7 +336,7 @@ export function BookingPage() {
             <button
               type="button"
               className="bk-btn-sec"
-              disabled={couponLoading}
+              disabled={couponLoading || !token}
               onClick={() => void applyCouponPress()}
             >
               {couponLoading ? '…' : 'Apply'}
@@ -341,25 +383,106 @@ export function BookingPage() {
         <section className="bk-card">
           <div className="bk-row-sp">
             <h2 className="bk-h">Address</h2>
-            <button type="button" className="bk-link" onClick={() => setAddOpen(true)}>
-              + Add
-            </button>
+            {token ? (
+              <button type="button" className="bk-link" onClick={() => setAddOpen(true)}>
+                + Add
+              </button>
+            ) : null}
           </div>
+          {token ? (
+            <p className="bk-muted" style={{ marginTop: 0, marginBottom: 10 }}>
+              Select an address or tap + Add.
+            </p>
+          ) : (
+            <p className="bk-muted" style={{ marginTop: 0, marginBottom: 10 }}>
+              Enter your service location. You’ll sign in on the next screen to pay.
+            </p>
+          )}
           {addressLoading ? <p className="bk-muted">Loading addresses…</p> : null}
           {addressErr ? <p className="bk-err">{addressErr}</p> : null}
-          <div className="bk-addr-list">
-            {addresses.map((a) => (
-              <button
-                key={a._id}
-                type="button"
-                className={`bk-addr ${selectedAddressId === a._id ? 'bk-addr--on' : ''}`}
-                onClick={() => void onSelectAddressCard(a)}
-              >
-                <div className="bk-addr-label">{a.label}</div>
-                <div className="bk-addr-line">{formatAddressOneLine(a)}</div>
-              </button>
-            ))}
-          </div>
+          {token ? (
+            <div className="bk-addr-list">
+              {addresses.map((a) => (
+                <button
+                  key={a._id}
+                  type="button"
+                  className={`bk-addr ${selectedAddressId === a._id ? 'bk-addr--on' : ''}`}
+                  onClick={() => void onSelectAddressCard(a)}
+                >
+                  <div className="bk-addr-label">{a.label}</div>
+                  <div className="bk-addr-line">{formatAddressOneLine(a)}</div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="bk-modal-form" style={{ marginTop: 4 }}>
+              <div className="bk-field">
+                <label className="bk-lab" htmlFor="bk-guest-label">
+                  Label
+                </label>
+                <input
+                  id="bk-guest-label"
+                  className="bk-inp"
+                  value={formLabel}
+                  onChange={(e) => setFormLabel(e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="bk-field">
+                <label className="bk-lab" htmlFor="bk-guest-l1">
+                  Line 1 *
+                </label>
+                <input
+                  id="bk-guest-l1"
+                  className="bk-inp"
+                  value={formLine1}
+                  onChange={(e) => setFormLine1(e.target.value)}
+                  autoComplete="address-line1"
+                />
+              </div>
+              <div className="bk-field">
+                <label className="bk-lab" htmlFor="bk-guest-l2">
+                  Line 2
+                </label>
+                <input
+                  id="bk-guest-l2"
+                  className="bk-inp"
+                  value={formLine2}
+                  onChange={(e) => setFormLine2(e.target.value)}
+                  autoComplete="address-line2"
+                />
+              </div>
+              <div className="bk-field">
+                <span className="bk-lab" id="bk-guest-region">
+                  City / State / PIN *
+                </span>
+                <div className="bk-field-stack" role="group" aria-labelledby="bk-guest-region">
+                  <input
+                    className="bk-inp"
+                    placeholder="City"
+                    value={formCity}
+                    onChange={(e) => setFormCity(e.target.value)}
+                    autoComplete="address-level2"
+                  />
+                  <input
+                    className="bk-inp"
+                    placeholder="State"
+                    value={formState}
+                    onChange={(e) => setFormState(e.target.value)}
+                    autoComplete="address-level1"
+                  />
+                  <input
+                    className="bk-inp"
+                    placeholder="PIN"
+                    value={formPin}
+                    onChange={(e) => setFormPin(e.target.value)}
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         <div className="bk-spacer" />
@@ -504,10 +627,18 @@ export function BookingPage() {
           letter-spacing: 0.08em;
         }
         .bk-title {
-          margin: 2px 0 0;
+          margin: 4px 0 0;
           font-size: 22px;
           font-weight: 800;
           color: #0f172a;
+        }
+        .bk-lead {
+          margin: 6px 0 0;
+          font-size: 13px;
+          line-height: 1.45;
+          color: #64748b;
+          font-weight: 600;
+          max-width: 280px;
         }
         .bk-loc-strip {
           display: flex;
