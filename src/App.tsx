@@ -1,6 +1,6 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
-import { PwaInstallModal } from './components/PwaInstallModal';
+import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { RequireAuth } from './components/RequireAuth';
 import { CartProvider } from './context/CartContext';
 import { CatalogRegionProvider } from './context/CatalogRegionContext';
@@ -27,8 +27,12 @@ import { ServiceDetailPage } from './pages/ServiceDetailPage';
 import { SplashPage } from './pages/SplashPage';
 import { WalletPage } from './pages/WalletPage';
 import { WalletTopupPage } from './pages/WalletTopupPage';
+import { getSession } from './lib/session';
 
 export default function App() {
+  useLocation();
+  const isLoggedIn = Boolean(getSession()?.token);
+
   return (
     <CurrentLocationProvider>
       <CatalogRegionProvider>
@@ -63,7 +67,12 @@ export default function App() {
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-            <PwaInstallModal />
+            <PwaInstallPrompt
+              isLoggedIn={isLoggedIn}
+              appName="Install App"
+              appDescription="Add AO CLEAN to your device for a faster, full-screen experience."
+              iconSrc="/pwa-192.png"
+            />
           </>
         </CartProvider>
       </CatalogRegionProvider>
