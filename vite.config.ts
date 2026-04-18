@@ -36,7 +36,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+        // Match Vite’s hashed bundles plus copied public assets (avoid `ico`/`svg`/`webp` if absent — empty
+        // extension groups can make Workbox warn on some setups).
+        globPatterns: ['**/*.{js,css,html,png,webmanifest}'],
       },
     }),
   ],
