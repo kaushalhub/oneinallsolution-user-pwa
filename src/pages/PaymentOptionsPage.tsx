@@ -23,6 +23,7 @@ import {
   formatRupeeInrGstLine,
   formatRupeeInrWholeFloor,
 } from '../utils/price';
+import { CHECKOUT_COD_ONLY } from '../config/paymentFlags';
 import { readBackendJwtUserId } from '../utils/backendJwt';
 import { IonIcon } from '../utils/ionIcon';
 
@@ -61,7 +62,7 @@ export function PaymentOptionsPage() {
   const [checkout, setCheckout] = useState<PaymentOptionsLocationState | null | undefined>(undefined);
   const { clearCart } = useCart();
 
-  const [payKind, setPayKind] = useState<PayKind>('online');
+  const [payKind, setPayKind] = useState<PayKind>(CHECKOUT_COD_ONLY ? 'cod' : 'online');
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWalletOnline, setUseWalletOnline] = useState(false);
   const [walletApplyAmount, setWalletApplyAmount] = useState(0);
@@ -281,6 +282,12 @@ export function PaymentOptionsPage() {
     }
     if (submitting) return;
 
+    if (CHECKOUT_COD_ONLY && payKind !== 'cod') {
+      setPayKind('cod');
+      setAlertMsg('Abhi sirf Cash on delivery available hai.');
+      return;
+    }
+
     if (payKind === 'cod') {
       setSubmitting(true);
       try {
@@ -374,9 +381,10 @@ export function PaymentOptionsPage() {
   };
 
   const ctaLabel = useMemo(() => {
-    if (payKind === 'cod') return 'Place order';
+    if (CHECKOUT_COD_ONLY || payKind === 'cod') return 'Place order';
     if (payKind === 'wallet') return `Pay ${formatRupeeInrWholeFloor(payTotal)} from wallet`;
     if (ctaOnlineAmount <= 0) return `Pay ${formatRupeeInrWholeFloor(payTotal)} from wallet`;
+    /* PhonePe / online — temporarily off when CHECKOUT_COD_ONLY */
     return `Pay ${formatRupeeInrWholeFloor(ctaOnlineAmount)} with PhonePe`;
   }, [payKind, payTotal, ctaOnlineAmount]);
 
@@ -452,114 +460,124 @@ export function PaymentOptionsPage() {
           </section>
         ) : null}
 
-        <h3 className="pay-sec">Wallet</h3>
-        <div className="pay-card">
-          <button
-            type="button"
-            className={`pay-opt ${payKind === 'wallet' ? 'pay-opt--on' : ''}`}
-            onClick={() => {
-              if (walletBalance + 0.005 < payTotal) {
-                setAlertMsg(
-                  'Insufficient balance. Add money in Wallet or pay online. You can use wallet for part of the total with PhonePe below.'
-                );
-                return;
-              }
-              setPayKind('wallet');
-              setUseWalletOnline(false);
-            }}
-          >
-            <span className="pay-ico pay-ico--wallet">
-              <IonIcon ionName="wallet-outline" size={22} color="#5f5a92" />
-            </span>
-            <div className="pay-opt-txt">
-              <div className="pay-opt-title">Pay from wallet</div>
-              <div className="pay-opt-sub">
-                {walletBalance + 0.005 < payTotal
-                  ? `Balance ${formatRupeeInr(walletBalance)} · Need ${formatRupeeInrWholeFloor(payTotal)}`
-                  : `Balance ${formatRupeeInr(walletBalance)}`}
-              </div>
-            </div>
-            {payKind === 'wallet' ? (
-              <IonIcon ionName="checkmark-circle" size={24} color={CTA_GREEN} />
-            ) : (
-              <span className="pay-radio" />
-            )}
-          </button>
+        {!CHECKOUT_COD_ONLY ? (
+          <>
+            <h3 className="pay-sec">Wallet</h3>
+            <div className="pay-card">
+              <button
+                type="button"
+                className={`pay-opt ${payKind === 'wallet' ? 'pay-opt--on' : ''}`}
+                onClick={() => {
+                  if (walletBalance + 0.005 < payTotal) {
+                    setAlertMsg(
+                      'Insufficient balance. Add money in Wallet or pay online. You can use wallet for part of the total with PhonePe below.'
+                    );
+                    return;
+                  }
+                  setPayKind('wallet');
+                  setUseWalletOnline(false);
+                }}
+              >
+                <span className="pay-ico pay-ico--wallet">
+                  <IonIcon ionName="wallet-outline" size={22} color="#5f5a92" />
+                </span>
+                <div className="pay-opt-txt">
+                  <div className="pay-opt-title">Pay from wallet</div>
+                  <div className="pay-opt-sub">
+                    {walletBalance + 0.005 < payTotal
+                      ? `Balance ${formatRupeeInr(walletBalance)} · Need ${formatRupeeInrWholeFloor(payTotal)}`
+                      : `Balance ${formatRupeeInr(walletBalance)}`}
+                  </div>
+                </div>
+                {payKind === 'wallet' ? (
+                  <IonIcon ionName="checkmark-circle" size={24} color={CTA_GREEN} />
+                ) : (
+                  <span className="pay-radio" />
+                )}
+              </button>
 
-          {payKind === 'online' && walletBalance > 0 ? (
-            <div className="pay-split">
-              <div className="pay-split-head">
-                <span>Use wallet + pay rest online</span>
-                <input
-                  type="checkbox"
-                  checked={useWalletOnline}
-                  onChange={(e) => {
-                    const v = e.target.checked;
-                    setUseWalletOnline(v);
-                    if (v) {
-                      setWalletApplyAmount(maxWalletApply);
-                      setWalletAmountStr(String(maxWalletApply));
-                    }
-                  }}
-                />
-              </div>
-              {useWalletOnline ? (
-                <div className="pay-split-body">
-                  <p className="pay-split-hint">
-                    Wallet {formatRupeeInrWholeFloor(walletPortionLive)} · Online{' '}
-                    {formatRupeeInrWholeFloor(ctaOnlineAmount)}
-                  </p>
-                  <div className="pay-wal-inp">
+              {payKind === 'online' && walletBalance > 0 ? (
+                <div className="pay-split">
+                  <div className="pay-split-head">
+                    <span>Use wallet + pay rest online</span>
                     <input
-                      type="text"
-                      inputMode="decimal"
-                      value={walletAmountStr}
-                      onChange={(e) => setWalletAmountStr(e.target.value)}
-                      onBlur={() => {
-                        const n = Number.parseFloat(walletAmountStr.replace(/,/g, ''));
-                        const c = Number.isFinite(n) ? roundMoney(Math.min(Math.max(0, n), maxWalletApply)) : 0;
-                        setWalletApplyAmount(c);
-                        setWalletAmountStr(String(c));
+                      type="checkbox"
+                      checked={useWalletOnline}
+                      onChange={(e) => {
+                        const v = e.target.checked;
+                        setUseWalletOnline(v);
+                        if (v) {
+                          setWalletApplyAmount(maxWalletApply);
+                          setWalletAmountStr(String(maxWalletApply));
+                        }
                       }}
                     />
-                    <button
-                      type="button"
-                      className="pay-max"
-                      onClick={() => {
-                        setWalletApplyAmount(maxWalletApply);
-                        setWalletAmountStr(String(maxWalletApply));
-                      }}
-                    >
-                      Max
-                    </button>
                   </div>
+                  {useWalletOnline ? (
+                    <div className="pay-split-body">
+                      <p className="pay-split-hint">
+                        Wallet {formatRupeeInrWholeFloor(walletPortionLive)} · Online{' '}
+                        {formatRupeeInrWholeFloor(ctaOnlineAmount)}
+                      </p>
+                      <div className="pay-wal-inp">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={walletAmountStr}
+                          onChange={(e) => setWalletAmountStr(e.target.value)}
+                          onBlur={() => {
+                            const n = Number.parseFloat(walletAmountStr.replace(/,/g, ''));
+                            const c = Number.isFinite(n) ? roundMoney(Math.min(Math.max(0, n), maxWalletApply)) : 0;
+                            setWalletApplyAmount(c);
+                            setWalletAmountStr(String(c));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="pay-max"
+                          onClick={() => {
+                            setWalletApplyAmount(maxWalletApply);
+                            setWalletAmountStr(String(maxWalletApply));
+                          }}
+                        >
+                          Max
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
-          ) : null}
-        </div>
 
-        <h3 className="pay-sec">Pay online</h3>
-        <div className="pay-card">
-          <button
-            type="button"
-            className={`pay-opt ${payKind === 'online' ? 'pay-opt--on' : ''}`}
-            onClick={() => setPayKind('online')}
-          >
-            <span className="pay-ico pay-ico--pp">
-              <img src="/phonepe.png" alt="" width={22} height={22} />
-            </span>
-            <div className="pay-opt-txt">
-              <div className="pay-opt-title">PhonePe</div>
-              <div className="pay-opt-sub">UPI and cards on PhonePe</div>
+            {/*
+              PhonePe / online gateway — abhi band (CHECKOUT_COD_ONLY).
+              Wapas chalu: paymentFlags.ts mein CHECKOUT_COD_ONLY = false
+            */}
+            <h3 className="pay-sec">Pay online</h3>
+            <div className="pay-card">
+              <button
+                type="button"
+                className={`pay-opt ${payKind === 'online' ? 'pay-opt--on' : ''}`}
+                onClick={() => setPayKind('online')}
+              >
+                <span className="pay-ico pay-ico--pp">
+                  <img src="/phonepe.png" alt="" width={22} height={22} />
+                </span>
+                <div className="pay-opt-txt">
+                  <div className="pay-opt-title">PhonePe</div>
+                  <div className="pay-opt-sub">UPI and cards on PhonePe</div>
+                </div>
+                {payKind === 'online' ? (
+                  <IonIcon ionName="checkmark-circle" size={24} color={CTA_GREEN} />
+                ) : (
+                  <span className="pay-radio" />
+                )}
+              </button>
             </div>
-            {payKind === 'online' ? (
-              <IonIcon ionName="checkmark-circle" size={24} color={CTA_GREEN} />
-            ) : (
-              <span className="pay-radio" />
-            )}
-          </button>
-        </div>
+          </>
+        ) : (
+          <p className="pay-cod-note">Abhi ke liye sirf <strong>Cash on delivery</strong>. PhonePe / online payment baad mein.</p>
+        )}
 
         <h3 className="pay-sec">Cash</h3>
         <div className="pay-card pay-card-last">
@@ -594,7 +612,7 @@ export function PaymentOptionsPage() {
         </button>
       </footer>
 
-      {bookingPaySession ? (
+      {!CHECKOUT_COD_ONLY && bookingPaySession ? (
         <div className="pay-modal">
           <div className="pay-modal-bg" />
           <div className="pay-modal-panel">
@@ -772,6 +790,15 @@ export function PaymentOptionsPage() {
         }
         .pay-sec:first-of-type {
           margin-top: 8px;
+        }
+        .pay-cod-note {
+          margin: 12px 0 4px;
+          padding: 12px 14px;
+          border-radius: 12px;
+          background: #f1f5f9;
+          font-size: 14px;
+          color: #475569;
+          line-height: 1.45;
         }
         .pay-card {
           border-bottom: 1px solid #e2e8f0;

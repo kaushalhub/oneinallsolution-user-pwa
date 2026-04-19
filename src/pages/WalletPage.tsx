@@ -6,6 +6,7 @@ import { getSession } from '../lib/session';
 import { formatRupeeInr } from '../utils/price';
 import { IonIcon } from '../utils/ionIcon';
 import { APP_PRODUCT_NAME } from '../constants/branding';
+import { WALLET_TOPUP_VIA_PHONEPE_DISABLED } from '../config/paymentFlags';
 
 function formatTxTitle(reason: string): string {
   const r = String(reason || '').toLowerCase();
@@ -111,14 +112,24 @@ export function WalletPage() {
               <div className="wal-balanceAmt">{formatRupeeInr(balance)}</div>
             </div>
 
-            <button type="button" className="wal-payCard" onClick={() => navigate('/wallet-topup')}>
-              <IonIcon ionName="card-outline" size={22} color="#7c77b9" />
-              <div className="wal-payMid">
-                <div className="wal-payTitle">Pay with UPI / card</div>
-                <div className="wal-paySub">Secure checkout via PhonePe (sandbox / live)</div>
+            {WALLET_TOPUP_VIA_PHONEPE_DISABLED ? (
+              <div className="wal-payCard wal-payCard--disabled" aria-disabled="true">
+                <IonIcon ionName="card-outline" size={22} color="#94a3b8" />
+                <div className="wal-payMid">
+                  <div className="wal-payTitle">Add money (UPI / card)</div>
+                  <div className="wal-paySub">Abhi band hai · checkout par COD use karein</div>
+                </div>
               </div>
-              <IonIcon ionName="chevron-forward" size={20} color="#94A3B8" />
-            </button>
+            ) : (
+              <button type="button" className="wal-payCard" onClick={() => navigate('/wallet-topup')}>
+                <IonIcon ionName="card-outline" size={22} color="#7c77b9" />
+                <div className="wal-payMid">
+                  <div className="wal-payTitle">Pay with UPI / card</div>
+                  <div className="wal-paySub">Secure checkout via PhonePe (sandbox / live)</div>
+                </div>
+                <IonIcon ionName="chevron-forward" size={20} color="#94A3B8" />
+              </button>
+            )}
 
             <div className="wal-earnGrid">
               <div className="wal-earnCard">
@@ -296,6 +307,12 @@ export function WalletPage() {
           text-align: left;
           cursor: pointer;
           width: 100%;
+        }
+        .wal-payCard--disabled {
+          opacity: 0.9;
+          cursor: default;
+          background: #f8fafc;
+          border-style: dashed;
         }
         .wal-payMid {
           flex: 1;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { HostedPaymentFrame } from '../components/HostedPaymentFrame';
+import { WALLET_TOPUP_VIA_PHONEPE_DISABLED } from '../config/paymentFlags';
 import { createPaymentOrder, verifyPaymentOrder } from '../lib/paymentApi';
 import { getSession } from '../lib/session';
 import { formatRupeeInr } from '../utils/price';
@@ -145,6 +146,86 @@ export function WalletTopupPage() {
       setLoading(false);
     }
   }, [amountNum]);
+
+  /* PhonePe wallet top-up — abhi band (see paymentFlags.ts). Must run after all hooks. */
+  if (WALLET_TOPUP_VIA_PHONEPE_DISABLED) {
+    return (
+      <div className="wtp-pick">
+        <header className="wtp-top">
+          <button type="button" className="wtp-back" onClick={() => navigate(-1)} aria-label="Back">
+            <IonIcon ionName="chevron-back" size={24} color="#0f172a" />
+          </button>
+          <h1 className="wtp-title">Add money</h1>
+          <span style={{ width: 40 }} />
+        </header>
+        <div className="wtp-body">
+          <p className="wtp-disabled-note">
+            PhonePe / online wallet top-up abhi band hai. Bookings ke liye checkout par <strong>Cash on delivery</strong>{' '}
+            use karein.
+          </p>
+          <button type="button" className="wtp-cta" onClick={() => navigate('/tabs/wallet', { replace: true })}>
+            Back to wallet
+          </button>
+        </div>
+        <style>{`
+          .wtp-pick {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100dvh;
+            background: #f8fafc;
+          }
+          .wtp-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: calc(var(--cs-safe-top) + 8px) 12px 12px;
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+          }
+          .wtp-back {
+            border: none;
+            background: transparent;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+          }
+          .wtp-title {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 800;
+            color: #0f172a;
+          }
+          .wtp-body {
+            padding: 24px;
+            flex: 1;
+          }
+          .wtp-disabled-note {
+            margin: 0 0 20px;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #475569;
+          }
+          .wtp-cta {
+            margin-top: 8px;
+            width: 100%;
+            max-width: 400px;
+            min-height: 52px;
+            border: none;
+            border-radius: 14px;
+            background: #7c77b9;
+            color: #fff;
+            font-weight: 800;
+            font-size: 16px;
+            cursor: pointer;
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   if (phase === 'checkout' && session) {
     return (
