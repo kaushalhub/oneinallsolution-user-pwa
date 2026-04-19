@@ -22,6 +22,8 @@ export type CatalogService = {
   iconUrl?: string | null;
   imageUrl: string | null;
   imageUrls: string[];
+  /** First before/after pair “before” URL — list views prefer this for thumb */
+  beforeImageUrl?: string | null;
   description: string;
 };
 
@@ -70,6 +72,14 @@ export type ServiceDetail = {
   iconBg: string;
   iconColor: string;
   category: string;
+  /** “What we will need from you” — icon = Ionicons name or image URL */
+  customerRequirements?: { title: string; icon: string }[];
+  /** “Please note” bullet lines */
+  importantNotes?: string[];
+  /** Red urgency line on detail (admin); empty = not shown */
+  demandBannerText?: string;
+  /** Result photos — admin “Before & after gallery” */
+  beforeAfterGallery?: { beforeUrl: string; afterUrl: string }[];
 };
 
 export type IndianStateOption = { code: string; label: string };

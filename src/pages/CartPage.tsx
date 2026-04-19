@@ -3,15 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { Colors } from '../constants/theme';
 import { useCart } from '../context/CartContext';
-import { useCatalogRegion } from '../context/CatalogRegionContext';
-import { resolveMediaUrl } from '../lib/api';
+import { useCatalogFetchQuery } from '../hooks/useCatalogFetchQuery';
+import { useDefaultUserAddress } from '../hooks/useDefaultUserAddress';
 import { fetchCatalogServices, type CatalogService } from '../lib/catalog';
+import { catalogServiceHeroImageUri } from '../utils/catalogServiceImage';
 import { formatRupeeInr } from '../utils/price';
 import { IonIcon } from '../utils/ionIcon';
 import type { BookingCartLine } from '../types/bookingFlow';
 
 function RecCard({ service, onPress }: { service: CatalogService; onPress: () => void }) {
-  const uri = resolveMediaUrl(service.imageUrl || service.imageUrls?.[0]);
+  const uri = catalogServiceHeroImageUri(service);
   return (
     <button type="button" className="cart-rec" onClick={onPress}>
       <div className="cart-rec-img-wrap">
@@ -28,7 +29,8 @@ function RecCard({ service, onPress }: { service: CatalogService; onPress: () =>
 
 export function CartPage() {
   const navigate = useNavigate();
-  const { catalogApiQuery } = useCatalogRegion();
+  const defaultAddr = useDefaultUserAddress();
+  const catalogFetchQuery = useCatalogFetchQuery(defaultAddr);
   const { lines, subtotal, removeLine, clearCart, itemCount } = useCart();
   const [catalog, setCatalog] = useState<CatalogService[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -36,7 +38,7 @@ export function CartPage() {
   useEffect(() => {
     let cancelled = false;
     setCatalogLoading(true);
-    void fetchCatalogServices(catalogApiQuery)
+    void fetchCatalogServices(catalogFetchQuery)
       .then((r) => {
         if (!cancelled) setCatalog(r.services ?? []);
       })
@@ -49,7 +51,7 @@ export function CartPage() {
     return () => {
       cancelled = true;
     };
-  }, [catalogApiQuery]);
+  }, [catalogFetchQuery]);
 
   const inCartSlugs = useMemo(() => new Set(lines.map((l) => l.slug)), [lines]);
   const recommended = useMemo(
@@ -405,13 +407,15 @@ export function CartPage() {
         }
         .cart-rec-row {
           display: flex;
+          flex-direction: column;
           gap: 12px;
-          overflow-x: auto;
           padding-bottom: 8px;
         }
         .cart-rec {
-          flex: 0 0 auto;
-          width: 160px;
+          width: 100%;
+          display: flex;
+          flex-direction: row;
+          align-items: stretch;
           border: none;
           padding: 0;
           border-radius: 16px;
@@ -422,7 +426,9 @@ export function CartPage() {
           cursor: pointer;
         }
         .cart-rec-img-wrap {
-          height: 100px;
+          width: 96px;
+          min-height: 96px;
+          flex-shrink: 0;
           background: #e2e8f0;
           position: relative;
         }
@@ -436,7 +442,12 @@ export function CartPage() {
           height: 100%;
         }
         .cart-rec-body {
-          padding: 10px 12px 12px;
+          flex: 1;
+          padding: 10px 14px 12px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          min-width: 0;
         }
         .cart-rec-title {
           font-weight: 800;

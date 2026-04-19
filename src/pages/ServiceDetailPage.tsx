@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { Colors } from '../constants/theme';
 import { useCart } from '../context/CartContext';
-import { useCatalogRegion } from '../context/CatalogRegionContext';
+import { useCatalogFetchQuery } from '../hooks/useCatalogFetchQuery';
+import { useDefaultUserAddress } from '../hooks/useDefaultUserAddress';
 import { resolveMediaUrl } from '../lib/api';
 import { fetchServiceDetail, type ServiceDetail } from '../lib/catalog';
+import { catalogPriceCityLine } from '../utils/catalogPriceRegion';
 import {
   formatRupeeInrDecimals,
   formatRupeeInrGstLine,
@@ -14,12 +16,13 @@ import {
 } from '../utils/price';
 import { IonIcon } from '../utils/ionIcon';
 
-const HIGHLIGHT_ICONS = ['sparkles-outline', 'ellipse-outline', 'shield-checkmark-outline'] as const;
+const LIST_CHECK_GREEN = '#059669';
 
 export function ServiceDetailPage() {
   const { slug = '' } = useParams();
   const navigate = useNavigate();
-  const { catalogApiQuery } = useCatalogRegion();
+  const defaultAddr = useDefaultUserAddress();
+  const catalogFetchQuery = useCatalogFetchQuery(defaultAddr);
   const { addLine } = useCart();
 
   const [data, setData] = useState<ServiceDetail | null>(null);
@@ -33,18 +36,20 @@ export function ServiceDetailPage() {
     setLoading(true);
     setErr(null);
     try {
-      const d = await fetchServiceDetail(slug, catalogApiQuery);
+      const d = await fetchServiceDetail(slug, catalogFetchQuery);
       setData(d);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load');
     } finally {
       setLoading(false);
     }
-  }, [slug, catalogApiQuery]);
+  }, [slug, catalogFetchQuery]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const detailPriceRegionLine = useMemo(() => catalogPriceCityLine(catalogFetchQuery), [catalogFetchQuery]);
 
   const addonTotal = useMemo(() => {
     if (!data) return 0;
@@ -86,6 +91,22 @@ export function ServiceDetailPage() {
     setTimeout(() => setAddedToast(false), 2200);
   }, [addLine, data, grandTotal, heroUri, selectedAddonIds]);
 
+  const beforeAfterPairs = useMemo(() => {
+    if (!data) return [];
+    const raw = data.beforeAfterGallery ?? [];
+    return raw
+      .map((p, i) => {
+        const b = String(p?.beforeUrl || '').trim();
+        const a = String(p?.afterUrl || '').trim();
+        return {
+          key: `ba-${i}-${b.slice(0, 24)}`,
+          beforeUri: b ? resolveMediaUrl(b) ?? b : null,
+          afterUri: a ? resolveMediaUrl(a) ?? a : null,
+        };
+      })
+      .filter((p) => p.beforeUri || p.afterUri);
+  }, [data]);
+
   if (loading) {
     return (
       <div className="svc-page pwa-page">
@@ -104,10 +125,11 @@ export function ServiceDetailPage() {
     );
   }
 
-  const highlights = data.scopeItems.slice(0, 3).map((title, i) => ({
-    icon: HIGHLIGHT_ICONS[i % HIGHLIGHT_ICONS.length],
-    title,
-  }));
+  const highlights = data.scopeItems.slice(0, 3).map((title) => ({ title }));
+
+  const customerRequirements = (data.customerRequirements || []).filter((r) => String(r.title || '').trim());
+  const importantNotes = (data.importantNotes || []).map((s) => String(s || '').trim()).filter(Boolean);
+  const demandBannerText = String(data.demandBannerText || '').trim();
 
   return (
     <div className="svc-page pwa-page">
@@ -141,21 +163,34 @@ export function ServiceDetailPage() {
 
         <div className="svc-pad">
           <h2 className="svc-title">{data.title}</h2>
-          <div className="svc-rating">
-            <IonIcon ionName="star" size={14} color="#EAB308" />
-            <span>4.8</span>
-            <span className="svc-rating-sub">reviews</span>
-          </div>
           <p className="svc-cat">{data.category}</p>
           <p className="svc-desc">{data.description}</p>
 
-          <div className="svc-warn">
-            <IonIcon ionName="information-circle" size={16} color="#AC3434" />
-            <span>High demand — book your slot</span>
-          </div>
+          {importantNotes.length > 0 ? (
+            <section className="svc-section">
+              <h3 className="svc-sec-title">Please note</h3>
+              <ul className="svc-notes">
+                {importantNotes.map((line, i) => (
+                  <li key={`note-${i}`} className="svc-note-line">
+                    <span className="svc-note-ico" aria-hidden>
+                      <IonIcon ionName="information-circle-outline" size={18} color="#64748b" />
+                    </span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {demandBannerText ? (
+            <div className="svc-warn">
+              <IonIcon ionName="information-circle" size={16} color="#AC3434" />
+              <span>{demandBannerText}</span>
+            </div>
+          ) : null}
 
           <div className="svc-price-block">
-            <div className="svc-price-label">You pay (incl. taxes)</div>
+            {detailPriceRegionLine ? <div className="svc-price-region">{detailPriceRegionLine}</div> : null}
             <div className="svc-price-big">
               {Number(data.gstPercent) > 0 &&
               data.baseAmount != null &&
@@ -211,7 +246,9 @@ export function ServiceDetailPage() {
             <h3 className="svc-sec-title">What’s included</h3>
             {highlights.map((h) => (
               <div key={h.title} className="svc-hl">
-                <IonIcon ionName={h.icon} size={20} color={Colors.primary} />
+                <span className="svc-hl-ico" aria-hidden>
+                  <IonIcon ionName="checkmark-circle" size={22} color={LIST_CHECK_GREEN} />
+                </span>
                 <div>
                   <div className="svc-hl-title">{h.title}</div>
                   <div className="svc-hl-body">Included in this service package.</div>
@@ -219,6 +256,50 @@ export function ServiceDetailPage() {
               </div>
             ))}
           </section>
+
+          {customerRequirements.length > 0 ? (
+            <section className="svc-section svc-section--needs">
+              <h3 className="svc-sec-title">What we will need from you</h3>
+              <div className="svc-req-list" role="list">
+                {customerRequirements.map((r, idx) => (
+                  <div key={`${r.title}-${idx}`} className="svc-req-card" role="listitem">
+                    <span className="svc-req-ico" aria-hidden>
+                      <IonIcon ionName="checkmark-circle" size={22} color={LIST_CHECK_GREEN} />
+                    </span>
+                    <div className="svc-req-txt">{r.title}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {beforeAfterPairs.length > 0 ? (
+            <section className="svc-section" aria-label="Before and after photos">
+              <h3 className="svc-sec-title">Before &amp; after</h3>
+              <div className="svc-ba-list">
+                {beforeAfterPairs.map((p) => (
+                  <div key={p.key} className="svc-ba-pair">
+                    {p.beforeUri ? (
+                      <div className="svc-ba-half">
+                        <div className="svc-ba-tag">Before</div>
+                        <div className="svc-ba-frame">
+                          <img src={p.beforeUri} alt="" className="svc-ba-img" loading="lazy" />
+                        </div>
+                      </div>
+                    ) : null}
+                    {p.afterUri ? (
+                      <div className="svc-ba-half">
+                        <div className="svc-ba-tag">After</div>
+                        <div className="svc-ba-frame">
+                          <img src={p.afterUri} alt="" className="svc-ba-img" loading="lazy" />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <div className="svc-bottom-spacer" />
         </div>
@@ -342,19 +423,6 @@ export function ServiceDetailPage() {
           font-weight: 800;
           letter-spacing: -0.4px;
         }
-        .svc-rating {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-top: 8px;
-          font-weight: 800;
-          font-size: 14px;
-        }
-        .svc-rating-sub {
-          font-weight: 600;
-          color: #94a3b8;
-          font-size: 13px;
-        }
         .svc-cat {
           margin: 6px 0 0;
           color: #64748b;
@@ -365,6 +433,96 @@ export function ServiceDetailPage() {
           color: #475569;
           line-height: 24px;
           font-size: 15px;
+        }
+        .svc-ba-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .svc-ba-pair {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 12px;
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+        }
+        .svc-ba-half {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .svc-ba-tag {
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #64748b;
+        }
+        .svc-ba-frame {
+          border-radius: 12px;
+          overflow: hidden;
+          background: #e2e8f0;
+          aspect-ratio: 4 / 3;
+        }
+        .svc-ba-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        .svc-section--needs {
+          margin-top: 20px;
+        }
+        .svc-req-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .svc-req-card {
+          width: 100%;
+          padding: 12px 14px;
+          border-radius: 14px;
+          border: 1px solid #e2e8f0;
+          background: #f8fafc;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: 14px;
+          text-align: left;
+        }
+        .svc-req-ico {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .svc-req-txt {
+          font-size: 14px;
+          font-weight: 700;
+          color: #0f172a;
+          line-height: 20px;
+        }
+        .svc-notes {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+        .svc-note-line {
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+          margin-bottom: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #475569;
+          line-height: 22px;
+        }
+        .svc-note-ico {
+          flex-shrink: 0;
+          margin-top: 2px;
         }
         .svc-warn {
           margin-top: 16px;
@@ -385,6 +543,12 @@ export function ServiceDetailPage() {
         .svc-price-label {
           font-size: 13px;
           font-weight: 700;
+          color: #64748b;
+        }
+        .svc-price-region {
+          margin-top: 4px;
+          font-size: 13px;
+          font-weight: 600;
           color: #64748b;
         }
         .svc-price-big {
@@ -455,6 +619,12 @@ export function ServiceDetailPage() {
           display: flex;
           gap: 12px;
           margin-bottom: 14px;
+        }
+        .svc-hl-ico {
+          flex-shrink: 0;
+          display: flex;
+          align-items: flex-start;
+          padding-top: 2px;
         }
         .svc-hl-title {
           font-weight: 800;

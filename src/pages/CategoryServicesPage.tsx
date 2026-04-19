@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { Colors } from '../constants/theme';
-import { useCatalogRegion } from '../context/CatalogRegionContext';
+import { useCatalogFetchQuery } from '../hooks/useCatalogFetchQuery';
+import { useDefaultUserAddress } from '../hooks/useDefaultUserAddress';
 import { fetchCatalogServices, type CatalogService } from '../lib/catalog';
+import { catalogPriceCityLine } from '../utils/catalogPriceRegion';
+import { formatCitySlugForDisplay } from '../utils/citySlug';
 import { catalogServiceHeroImageUri } from '../utils/catalogServiceImage';
 
 export function CategoryServicesPage() {
@@ -11,7 +14,9 @@ export function CategoryServicesPage() {
   const [searchParams] = useSearchParams();
   const label = searchParams.get('label') || 'Services';
   const navigate = useNavigate();
-  const { catalogApiQuery } = useCatalogRegion();
+  const defaultAddr = useDefaultUserAddress();
+  const catalogFetchQuery = useCatalogFetchQuery(defaultAddr);
+  const priceCityLine = useMemo(() => catalogPriceCityLine(catalogFetchQuery), [catalogFetchQuery]);
 
   const [items, setItems] = useState<CatalogService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +26,7 @@ export function CategoryServicesPage() {
     setLoading(true);
     setErr(null);
     try {
-      const { services } = await fetchCatalogServices(catalogApiQuery);
+      const { services } = await fetchCatalogServices(catalogFetchQuery);
       const filtered = services.filter((s) => s.catClass === categoryKey);
       setItems(filtered);
     } catch (e) {
@@ -29,7 +34,7 @@ export function CategoryServicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [catalogApiQuery, categoryKey]);
+  }, [catalogFetchQuery, categoryKey]);
 
   useEffect(() => {
     void load();
@@ -49,6 +54,7 @@ export function CategoryServicesPage() {
         </Link>
       </header>
       <div className="cat-body">
+        {priceCityLine ? <p className="cat-price-region">{priceCityLine}</p> : null}
         {loading ? <p className="cat-muted">Loading…</p> : null}
         {err ? <p className="cat-err">{err}</p> : null}
         {!loading && !err && items.length === 0 ? <p className="cat-muted">No services in this category.</p> : null}
@@ -69,7 +75,12 @@ export function CategoryServicesPage() {
                       {s.description.slice(0, 90)}
                       {s.description.length > 90 ? '…' : ''}
                     </div>
-                    <div className="cat-price">₹{Math.round(s.priceAmount)}</div>
+                    <div className="cat-price">
+                      ₹{Math.round(s.priceAmount)}
+                      {catalogFetchQuery?.city ? (
+                        <span className="cat-price-city"> · {formatCitySlugForDisplay(catalogFetchQuery.city)}</span>
+                      ) : null}
+                    </div>
                   </div>
                 </button>
               </li>
@@ -113,6 +124,12 @@ export function CategoryServicesPage() {
         .cat-body {
           padding: 16px;
           flex: 1;
+        }
+        .cat-price-region {
+          margin: 0 0 12px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #64748b;
         }
         .cat-muted {
           color: #64748b;
@@ -166,6 +183,11 @@ export function CategoryServicesPage() {
           margin-top: 8px;
           font-weight: 800;
           color: #0f172a;
+        }
+        .cat-price-city {
+          font-size: 12px;
+          font-weight: 700;
+          color: #64748b;
         }
       `}</style>
     </div>

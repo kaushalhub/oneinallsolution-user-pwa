@@ -1,7 +1,8 @@
 import { shouldSessionRedirectOn401 } from './authWall';
 import { clearSession } from './session';
 
-const DEV_FALLBACK_API_BASE_URL = 'https://api.oneinallsolution.com';
+// const DEV_FALLBACK_API_BASE_URL = 'https://api.oneinallsolution.com';
+const DEV_FALLBACK_API_BASE_URL = 'http://localhost:9090';
 
 function normalizeApiOrigin(raw: string): string {
   return raw.trim().replace(/\/+$/, '');

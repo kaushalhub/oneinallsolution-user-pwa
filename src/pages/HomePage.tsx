@@ -19,6 +19,9 @@ import {
 import { resolveMediaUrl } from '../lib/api';
 import { getSession } from '../lib/session';
 import { fetchUserAddresses, formatAddressOneLine, selectUserAddress, type UserAddress } from '../lib/userApi';
+import { useCatalogFetchQuery } from '../hooks/useCatalogFetchQuery';
+import { catalogPriceCityLine } from '../utils/catalogPriceRegion';
+import { formatCitySlugForDisplay } from '../utils/citySlug';
 import { catalogServiceHeroImageUri } from '../utils/catalogServiceImage';
 import { IonIcon } from '../utils/ionIcon';
 import { resolveServiceIonicon } from '../utils/serviceIcon';
@@ -46,7 +49,6 @@ export function HomePage() {
   const navigate = useNavigate();
   const { itemCount } = useCart();
   const {
-    catalogApiQuery,
     catalogRegionLabel,
     mode: regionMode,
     indianStates,
@@ -68,6 +70,15 @@ export function HomePage() {
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(false);
   const [addressesErr, setAddressesErr] = useState<string | null>(null);
+
+  const activeAddr = useMemo(() => {
+    if (addresses.length === 0) return null;
+    return addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+  }, [addresses]);
+
+  const catalogFetchQuery = useCatalogFetchQuery(activeAddr);
+
+  const recommendedPriceRegionLine = useMemo(() => catalogPriceCityLine(catalogFetchQuery), [catalogFetchQuery]);
 
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
 
@@ -92,7 +103,7 @@ export function HomePage() {
   const refreshCatalog = useCallback(async () => {
     setCatalogErr(null);
     try {
-      const q = catalogApiQuery;
+      const q = catalogFetchQuery;
       const [svc, ban, cat] = await Promise.all([
         fetchCatalogServices(q),
         fetchCatalogBanners(),
@@ -108,7 +119,7 @@ export function HomePage() {
     } finally {
       setCatalogLoading(false);
     }
-  }, [catalogApiQuery]);
+  }, [catalogFetchQuery]);
 
   useEffect(() => {
     void refreshCatalog();
@@ -159,11 +170,6 @@ export function HomePage() {
     const slug = findSlugForServiceTitle(services, lastBooking.service);
     if (slug) navigate(`/service/${encodeURIComponent(slug)}`);
   }, [lastBooking, navigate, services]);
-
-  const activeAddr = useMemo(() => {
-    if (addresses.length === 0) return null;
-    return addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
-  }, [addresses]);
 
   const addressSubtitle = useMemo(() => {
     if (activeAddr) return truncateHomeDesc(formatAddressOneLine(activeAddr), 56);
@@ -345,7 +351,10 @@ export function HomePage() {
             {recommendedServices.length > 0 ? (
               <section className="home-section">
                 <h2 className="home-section-title">Recommended for you</h2>
-                <div className="home-rec-scroll">
+                {recommendedPriceRegionLine ? (
+                  <p className="home-section-sub">{recommendedPriceRegionLine}</p>
+                ) : null}
+                <div className="home-rec-list">
                   {recommendedServices.map((s) => {
                     const img = catalogServiceHeroImageUri(s);
                     return (
@@ -360,8 +369,15 @@ export function HomePage() {
                           <div className="home-rec-title">{s.name}</div>
                           <div className="home-rec-sub">{truncateHomeDesc(s.description, 80)}</div>
                           <div className="home-rec-meta">
-                            <span>★ 4.8</span>
-                            <span className="home-rec-price">₹{Math.round(s.priceAmount)}</span>
+                            <span className="home-rec-price">
+                              ₹{Math.round(s.priceAmount)}
+                              {catalogFetchQuery?.city ? (
+                                <span className="home-rec-price-city">
+                                  {' '}
+                                  · {formatCitySlugForDisplay(catalogFetchQuery.city)}
+                                </span>
+                              ) : null}
+                            </span>
                           </div>
                         </div>
                       </button>
@@ -442,8 +458,11 @@ export function HomePage() {
       <style>{`
         .home-page {
           flex: 1;
-          background: #f4f6f8;
           min-height: 0;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          background: #f4f6f8;
         }
         .home-shell {
           position: relative;
@@ -451,10 +470,16 @@ export function HomePage() {
           min-height: 0;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
         }
         .home-scroll {
           flex: 1;
-          overflow: auto;
+          min-height: 0;
+          overflow-x: hidden;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-y: contain;
+          touch-action: pan-y;
           padding-bottom: calc(24px + var(--cs-safe-bottom));
         }
         .home-hero-gradient {
@@ -465,8 +490,12 @@ export function HomePage() {
           display: flex;
           gap: 12px;
           overflow-x: auto;
+          overflow-y: hidden;
           padding: 0 24px 12px;
           scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          touch-action: pan-x;
+          overscroll-behavior-x: contain;
         }
         .home-banner-card {
           flex: 0 0 auto;
@@ -556,6 +585,12 @@ export function HomePage() {
           font-weight: 800;
           letter-spacing: -0.3px;
         }
+        .home-section-sub {
+          margin: 6px 0 0;
+          font-size: 13px;
+          font-weight: 600;
+          color: #64748b;
+        }
         .home-repeat {
           display: flex;
           align-items: center;
@@ -636,16 +671,15 @@ export function HomePage() {
           font-size: 14px;
           padding: 8px 0;
         }
-        .home-rec-scroll {
+        .home-rec-list {
           display: flex;
+          flex-direction: column;
           gap: 12px;
-          overflow-x: auto;
           padding-top: 12px;
           padding-bottom: 4px;
         }
         .home-rec-card {
-          flex: 0 0 auto;
-          width: 240px;
+          width: 100%;
           border-radius: 16px;
           border: 1px solid #e2e8f0;
           background: #fff;
@@ -687,6 +721,11 @@ export function HomePage() {
         }
         .home-rec-price {
           color: #0f172a;
+        }
+        .home-rec-price-city {
+          font-size: 11px;
+          font-weight: 700;
+          color: #64748b;
         }
         .home-footer {
           margin: 8px calc(50% - 50vw) 0;
