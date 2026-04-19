@@ -111,6 +111,10 @@ function categoriesCatalogQuery(opts?: { state?: string; city?: string }) {
   };
 }
 
+/**
+ * Home “Services” category tiles: call **without** `opts` so every state/city sees the same grid.
+ * Regional filtering applies to {@link fetchCatalogServices} / service detail, not the category list.
+ */
 export async function fetchCatalogCategories(opts?: { state?: string; city?: string }) {
   return apiRequest<{ categories: CatalogCategory[] }>('/catalog/categories', {
     query: categoriesCatalogQuery(opts),

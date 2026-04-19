@@ -17,7 +17,6 @@ import { HomePage } from './pages/HomePage';
 import { LocationGatePage } from './pages/LocationGatePage';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingPage } from './pages/OnboardingPage';
-import { OTPPage } from './pages/OTPPage';
 import { PaymentOptionsPage } from './pages/PaymentOptionsPage';
 import { PaymentReturnPage } from './pages/PaymentReturnPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -44,7 +43,7 @@ export default function App() {
               <Route path="/location" element={<LocationGatePage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/otp" element={<OTPPage />} />
+              <Route path="/otp" element={<Navigate to="/login" replace />} />
               {/* Home tab is public (browse without login); other tabs stay behind RequireAuth. */}
               <Route path="/tabs" element={<MainTabLayout />}>
                 <Route index element={<Navigate to="home" replace />} />

@@ -2,7 +2,7 @@ import { apiRequest } from './api';
 
 export type AuthUser = {
   _id: string;
-  phone: string;
+  phone?: string;
   name: string;
   email?: string;
   dateOfBirth?: string | null;
@@ -15,45 +15,39 @@ export type AuthUser = {
 /** Same shape as mobile `UserProfile`. */
 export type UserProfile = AuthUser;
 
-type SendOtpResponse = {
-  message: string;
-  requestId?: string;
-  otpSessionId?: string;
-};
-
-type VerifyOtpResponse = {
+export type PasswordAuthResponse = {
   message: string;
   sessionToken: string | null;
   isNewUser: boolean;
   user: AuthUser;
 };
 
-export async function sendOtp(phone: string) {
-  return apiRequest<SendOtpResponse>('/auth/send-otp', {
-    method: 'POST',
-    body: { phone },
-  });
-}
+export type SignupPasswordInput = {
+  password: string;
+  name?: string;
+  email?: string;
+  mobile?: string;
+  referralCode?: string;
+};
 
-export async function resendOtp(phone: string, requestId?: string) {
-  return apiRequest<SendOtpResponse>('/auth/resend-otp', {
+export async function signupPassword(opts: SignupPasswordInput) {
+  const { password, name, email, mobile, referralCode } = opts;
+  return apiRequest<PasswordAuthResponse>('/auth/signup-password', {
     method: 'POST',
     body: {
-      phone,
-      ...(requestId ? { requestId } : {}),
-    },
-  });
-}
-
-export async function verifyOtp(phone: string, otp: string, requestId?: string, referralCode?: string) {
-  return apiRequest<VerifyOtpResponse>('/auth/verify-otp', {
-    method: 'POST',
-    body: {
-      phone,
-      otp,
-      ...(requestId ? { requestId } : {}),
+      password,
+      ...(name?.trim() ? { name: name.trim() } : {}),
+      ...(email?.trim() ? { email: email.trim() } : {}),
+      ...(mobile?.trim() ? { mobile: mobile.trim() } : {}),
       ...(referralCode ? { referralCode } : {}),
     },
+  });
+}
+
+export async function loginPassword(identifier: string, password: string) {
+  return apiRequest<PasswordAuthResponse>('/auth/login-password', {
+    method: 'POST',
+    body: { identifier: identifier.trim(), password },
   });
 }
 

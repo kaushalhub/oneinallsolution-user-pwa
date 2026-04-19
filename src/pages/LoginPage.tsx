@@ -2,12 +2,19 @@ import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { AppBrandMark } from '../components/AppBrandMark';
-import { sendOtp } from '../lib/authApi';
-import { setOtpSession } from '../lib/otpSession';
+import { loginPassword, signupPassword } from '../lib/authApi';
+import { saveSession } from '../lib/session';
 
-function normalizeIndianPhone(input: string) {
-  const digits = input.replace(/\D/g, '');
-  return digits.slice(-10);
+type Busy = 'off' | 'submit';
+
+function isValidEmail(s: string) {
+  const t = s.trim();
+  if (!t) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
+}
+
+function normalizeIndianPhoneDigits(input: string) {
+  return input.replace(/\D/g, '').slice(-10);
 }
 
 export function LoginPage() {
@@ -17,30 +24,75 @@ export function LoginPage() {
   const from = (location.state as { from?: string } | null)?.from;
   const sessionExpired = searchParams.get('reason') === 'session';
 
-  const [phone, setPhone] = useState('');
+  /** Sign-in: single field (email or mobile). */
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  /** Sign-up: split fields — at least one of email or mobile required. */
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupMobile, setSignupMobile] = useState('');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [registerMode, setRegisterMode] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [busy, setBusy] = useState<Busy>('off');
 
-  const phoneDigits = normalizeIndianPhone(phone);
-  const canSubmit = phoneDigits.length === 10 && !isLoading;
+  const phoneDigits = normalizeIndianPhoneDigits(signupMobile);
+  const hasSignupEmail = isValidEmail(signupEmail);
+  const hasSignupMobile = phoneDigits.length === 10;
 
-  const handleSendOtp = async () => {
-    if (phoneDigits.length !== 10) {
-      setError('Please enter a valid 10-digit mobile number.');
+  const canSubmitLogin =
+    loginIdentifier.trim().length > 0 && password.length >= 8 && busy === 'off';
+
+  const canSubmitSignup =
+    password.length >= 8 &&
+    (hasSignupEmail || hasSignupMobile) &&
+    busy === 'off';
+
+  const canSubmit = registerMode ? canSubmitSignup : canSubmitLogin;
+
+  const goHomeAfterAuth = () => {
+    const target = from && from.startsWith('/') ? from : '/tabs/home';
+    navigate(target, { replace: true });
+  };
+
+  const completeAuth = (loginResponse: Awaited<ReturnType<typeof loginPassword>>) => {
+    if (!loginResponse.sessionToken) {
+      throw new Error('Server did not return a session token.');
+    }
+    saveSession({
+      token: loginResponse.sessionToken,
+      userId: loginResponse.user?._id != null ? String(loginResponse.user._id) : undefined,
+      phone: loginResponse.user?.phone,
+    });
+    goHomeAfterAuth();
+  };
+
+  const handleSubmit = async () => {
+    if (registerMode) {
+      if (!canSubmitSignup) {
+        setError('Enter a valid email and/or 10-digit mobile, and password (min 8 characters).');
+        return;
+      }
+    } else if (!canSubmitLogin) {
+      setError('Enter email or mobile and a password (min 8 characters).');
       return;
     }
     try {
       setError('');
-      setIsLoading(true);
-      const fullPhoneNumber = `+91${phoneDigits}`;
-      const response = await sendOtp(fullPhoneNumber);
-      setOtpSession(response.requestId || response.otpSessionId, fullPhoneNumber);
-      navigate('/otp', { state: { phoneNumber: fullPhoneNumber, from } });
-    } catch (sendError) {
-      const message = sendError instanceof Error ? sendError.message : 'Failed to send OTP. Please try again.';
+      setBusy('submit');
+      const response = registerMode
+        ? await signupPassword({
+            password,
+            ...(name.trim() ? { name: name.trim() } : {}),
+            ...(hasSignupEmail ? { email: signupEmail.trim() } : {}),
+            ...(hasSignupMobile ? { mobile: signupMobile } : {}),
+          })
+        : await loginPassword(loginIdentifier, password);
+      await completeAuth(response);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Something went wrong. Please try again.';
       setError(message);
     } finally {
-      setIsLoading(false);
+      setBusy('off');
     }
   };
 
@@ -48,28 +100,109 @@ export function LoginPage() {
     <div className="login-page pwa-page">
       <div className="login-inner">
         <AppBrandMark variant="compact" />
-        <h1 className="login-title">Login with Phone</h1>
-        <p className="login-sub">Enter your mobile number to receive OTP</p>
+        <h1 className="login-title">{registerMode ? 'Create account' : 'Sign in'}</h1>
+        <p className="login-sub">
+          {registerMode
+            ? 'Name is optional. Enter at least email or mobile, plus password.'
+            : 'Use your email or Indian mobile number and password'}
+        </p>
         {sessionExpired ? (
           <p className="login-banner" role="status">
             Your session expired or was signed out elsewhere. Please log in again.
           </p>
         ) : null}
-        <div className="login-input-wrap">
-          <span className="login-prefix">+91</span>
+
+        {registerMode ? (
+          <>
+            <div className="login-field">
+              <label className="login-label" htmlFor="login-name">
+                Name <span className="login-optional">(optional)</span>
+              </label>
+              <input
+                id="login-name"
+                className="login-field-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                type="text"
+                autoComplete="name"
+              />
+            </div>
+            <div className="login-field">
+              <label className="login-label" htmlFor="signup-email">
+                Email <span className="login-optional">(if no mobile)</span>
+              </label>
+              <input
+                id="signup-email"
+                className="login-field-input"
+                value={signupEmail}
+                onChange={(e) => setSignupEmail(e.target.value)}
+                placeholder="you@example.com"
+                type="email"
+                autoComplete="email"
+              />
+            </div>
+            <p className="login-hint">At least one of email or mobile is required.</p>
+            <div className="login-field">
+              <label className="login-label" htmlFor="signup-mobile">
+                Mobile <span className="login-optional">(if no email)</span>
+              </label>
+              <div className="login-input-wrap">
+                <span className="login-prefix">+91</span>
+                <input
+                  id="signup-mobile"
+                  className="login-input"
+                  value={signupMobile}
+                  onChange={(e) => setSignupMobile(e.target.value)}
+                  placeholder="10-digit number"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={14}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="login-field">
+            <label className="login-label" htmlFor="login-identifier">
+              Email or mobile
+            </label>
+            <input
+              id="login-identifier"
+              className="login-field-input"
+              value={loginIdentifier}
+              onChange={(e) => setLoginIdentifier(e.target.value)}
+              placeholder="you@example.com or 10-digit mobile"
+              type="text"
+              autoComplete="username"
+            />
+          </div>
+        )}
+        <div className="login-field">
+          <label className="login-label" htmlFor="login-password">
+            Password
+          </label>
           <input
-            className="login-input"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Enter phone number"
-            inputMode="numeric"
-            autoComplete="tel"
-            maxLength={14}
+            id="login-password"
+            className="login-field-input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Min 8 characters"
+            type="password"
+            autoComplete={registerMode ? 'new-password' : 'current-password'}
           />
         </div>
         {error ? <p className="login-error">{error}</p> : null}
-        <button type="button" className="login-btn" disabled={!canSubmit} onClick={() => void handleSendOtp()}>
-          {isLoading ? <span className="login-spinner" /> : 'Send OTP'}
+        <button
+          type="button"
+          className="login-btn"
+          disabled={!canSubmit}
+          onClick={() => void handleSubmit()}
+        >
+          {busy === 'submit' ? <span className="login-spinner" /> : registerMode ? 'Create account' : 'Sign in'}
+        </button>
+        <button type="button" className="login-toggle" onClick={() => setRegisterMode((v) => !v)}>
+          {registerMode ? 'Already have an account? Sign in' : 'New here? Create account'}
         </button>
       </div>
       <style>{`
@@ -96,7 +229,7 @@ export function LoginPage() {
           font-size: 14px;
           line-height: 22px;
           text-align: center;
-          margin: 8px 0 28px;
+          margin: 8px 0 20px;
         }
         .login-banner {
           margin: -12px 0 20px;
@@ -109,19 +242,53 @@ export function LoginPage() {
           line-height: 20px;
           text-align: center;
         }
+        .login-field {
+          margin-bottom: 14px;
+        }
+        .login-label {
+          display: block;
+          font-size: 12px;
+          font-weight: 700;
+          color: #64748b;
+          margin-bottom: 6px;
+        }
+        .login-optional {
+          font-weight: 600;
+          color: #94a3b8;
+        }
+        .login-hint {
+          margin: -6px 0 14px;
+          font-size: 12px;
+          color: #64748b;
+          line-height: 18px;
+        }
+        .login-field-input {
+          width: 100%;
+          height: 48px;
+          border-radius: 14px;
+          border: 1px solid #d7dfe0;
+          padding: 0 14px;
+          font-size: 16px;
+          font-weight: 600;
+          color: #2c3435;
+          background: #fff;
+        }
+        .login-field-input::placeholder {
+          color: #9aa5a6;
+        }
         .login-input-wrap {
-          height: 56px;
-          border-radius: 16px;
+          height: 48px;
+          border-radius: 14px;
           border: 1px solid #d7dfe0;
           background: #fff;
-          padding: 0 16px;
+          padding: 0 14px;
           display: flex;
           align-items: center;
           gap: 8px;
         }
         .login-prefix {
           color: #2c3435;
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 700;
         }
         .login-input {
@@ -130,7 +297,7 @@ export function LoginPage() {
           outline: none;
           background: transparent;
           color: #2c3435;
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
         }
         .login-input::placeholder {
@@ -155,6 +322,17 @@ export function LoginPage() {
         }
         .login-btn:disabled {
           opacity: 0.45;
+        }
+        .login-toggle {
+          width: 100%;
+          margin-top: 10px;
+          border: none;
+          background: none;
+          color: #7c77b9;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+          text-decoration: underline;
         }
         .login-spinner {
           display: inline-block;

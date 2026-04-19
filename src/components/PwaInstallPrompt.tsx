@@ -120,7 +120,7 @@ export function PwaInstallPrompt({
   const [motionOpen, setMotionOpen] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
 
-  const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closingTimerRef = useRef<number | null>(null);
 
   /** Login-independent: 2+ visits or 30s on site (works on public routes before auth). */
   const eligible = useMemo(() => {

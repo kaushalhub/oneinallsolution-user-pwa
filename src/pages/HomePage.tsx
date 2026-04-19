@@ -7,6 +7,7 @@ import { APP_PRODUCT_NAME } from '../constants/branding';
 import { Colors } from '../constants/theme';
 import { useCart } from '../context/CartContext';
 import { useCatalogRegion } from '../context/CatalogRegionContext';
+import { useCurrentLocation } from '../context/CurrentLocationStub';
 import { fetchMyBookings, type BookingRecord } from '../lib/booking';
 import {
   fetchCatalogBanners,
@@ -55,6 +56,8 @@ export function HomePage() {
     setRegionPreference,
     regionReady,
   } = useCatalogRegion();
+  const { coords: liveCoords, locationError: liveLocationError, accuracyMeters: liveAccuracyM } =
+    useCurrentLocation();
 
   const [services, setServices] = useState<CatalogService[]>([]);
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
@@ -107,7 +110,8 @@ export function HomePage() {
       const [svc, ban, cat] = await Promise.all([
         fetchCatalogServices(q),
         fetchCatalogBanners(),
-        fetchCatalogCategories(q ? { state: q.state, city: q.city } : undefined).catch(() => ({
+        // Categories: show full home grid in every region; services list stays regional via `q` above.
+        fetchCatalogCategories().catch(() => ({
           categories: [] as CatalogCategory[],
         })),
       ]);
@@ -223,6 +227,9 @@ export function HomePage() {
   };
 
   const locRipple = headerElevated ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.14)';
+
+  const showLiveLocationBadge =
+    regionMode === 'auto' && liveCoords != null && !liveLocationError;
 
   return (
     <div className="home-page">
@@ -413,9 +420,20 @@ export function HomePage() {
             onClick={openLocationEntry}
           >
             <div className="home-header-title-row">
-              <span className={`home-header-primary ${headerElevated ? 'home-header-primary--dark' : ''}`}>
-                {regionReady || activeAddr ? primaryLocationTitle : 'Loading…'}
-              </span>
+              <div className="home-header-title-left">
+                <span className={`home-header-primary ${headerElevated ? 'home-header-primary--dark' : ''}`}>
+                  {regionReady || activeAddr ? primaryLocationTitle : 'Loading…'}
+                </span>
+                {showLiveLocationBadge ? (
+                  <span
+                    className={`home-live-loc ${headerElevated ? 'home-live-loc--dark' : ''}`}
+                    title={liveAccuracyM != null ? `Live location · ±${liveAccuracyM} m` : 'Live location'}
+                  >
+                    <span className="home-live-dot" />
+                    Live
+                  </span>
+                ) : null}
+              </div>
               <IonIcon
                 ionName="chevron-forward"
                 size={18}
@@ -799,8 +817,16 @@ export function HomePage() {
           justify-content: space-between;
           gap: 8px;
         }
+        .home-header-title-left {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
         .home-header-primary {
           flex: 1;
+          min-width: 0;
           font-size: 16px;
           font-weight: 800;
           color: #fff;
@@ -808,6 +834,43 @@ export function HomePage() {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+        .home-live-loc {
+          flex-shrink: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.95);
+        }
+        .home-live-loc--dark {
+          color: #059669;
+        }
+        .home-live-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #6ee7b7;
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+          animation: home-live-pulse 1.6s ease-in-out infinite;
+        }
+        .home-live-loc--dark .home-live-dot {
+          background: #10b981;
+          box-shadow: none;
+        }
+        @keyframes home-live-pulse {
+          0%,
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.55;
+            transform: scale(0.88);
+          }
         }
         .home-header-primary--dark {
           color: #0f172a;
