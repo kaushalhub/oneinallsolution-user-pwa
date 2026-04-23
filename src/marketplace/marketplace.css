@@ -1,0 +1,139 @@
+/* Mobile-first lavender marketplace demo */
+.mp-root {
+  --mp-primary: #8b5cf6;
+  --mp-primary-dark: #7c3aed;
+  --mp-bg: #f8f7ff;
+  --mp-card: #ffffff;
+  --mp-text: #1e1b4b;
+  --mp-muted: #6b7280;
+  --mp-border: #e9e7f5;
+  --mp-radius: 16px;
+  --mp-space: 8px;
+  min-height: 100vh;
+  background: var(--mp-bg);
+  color: var(--mp-text);
+  font-family:
+    Inter,
+    system-ui,
+    sans-serif;
+}
+
+.mp-top {
+  padding: calc(var(--mp-space) * 2);
+  padding-bottom: var(--mp-space);
+  border-bottom: 1px solid var(--mp-border);
+  background: var(--mp-card);
+}
+
+.mp-top h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.mp-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--mp-muted);
+}
+
+.mp-body {
+  padding: calc(var(--mp-space) * 2);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.mp-card {
+  background: var(--mp-card);
+  border-radius: var(--mp-radius);
+  border: 1px solid var(--mp-border);
+  padding: calc(var(--mp-space) * 2);
+  margin-bottom: calc(var(--mp-space) * 2);
+  box-shadow: 0 1px 3px rgba(30, 27, 75, 0.06);
+}
+
+.mp-card h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.mp-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--mp-border);
+  text-decoration: none;
+  color: inherit;
+}
+
+.mp-row:last-child {
+  border-bottom: 0;
+}
+
+.mp-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mp-primary-dark);
+  background: rgba(139, 92, 246, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.mp-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 800;
+  font-size: 15px;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--mp-primary), var(--mp-primary-dark));
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+}
+
+.mp-btn:disabled {
+  opacity: 0.5;
+}
+
+.mp-select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--mp-border);
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+.mp-note {
+  font-size: 12px;
+  color: var(--mp-muted);
+  margin: 8px 0 0;
+}
+
+.mp-total {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--mp-primary-dark);
+  text-align: center;
+  margin: 12px 0 0;
+}
+
+.mp-break {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.mp-break .line {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+}
+
+.mp-break .sep {
+  height: 1px;
+  background: var(--mp-border);
+  margin: 10px 0;
+}

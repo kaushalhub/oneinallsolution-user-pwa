@@ -10,7 +10,6 @@ type Props = {
   error: string | null;
   activeAddressId: string | null;
   onSelectAddress: (addr: UserAddress) => void | Promise<void>;
-  onChangeCity: () => void;
 };
 
 export function HomeLocationSheet({
@@ -21,7 +20,6 @@ export function HomeLocationSheet({
   error,
   activeAddressId,
   onSelectAddress,
-  onChangeCity,
 }: Props) {
   if (!open) return null;
 
@@ -33,7 +31,7 @@ export function HomeLocationSheet({
         <h2 id="hls-title" className="hls-title">
           Delivery location
         </h2>
-        <p className="hls-desc">Choose a saved address or change your service area.</p>
+        <p className="hls-desc">Choose a saved address for delivery.</p>
 
         {error ? <p className="hls-err">{error}</p> : null}
 
@@ -42,7 +40,7 @@ export function HomeLocationSheet({
         {!loading && addresses.length === 0 ? (
           <div className="hls-empty">
             <p className="hls-empty-title">No saved address yet</p>
-            <p className="hls-muted">Add an address for faster checkout, or pick your city below.</p>
+            <p className="hls-muted">Add an address for faster checkout.</p>
           </div>
         ) : null}
 
@@ -67,17 +65,6 @@ export function HomeLocationSheet({
             })}
           </div>
         ) : null}
-
-        <button
-          type="button"
-          className="hls-secondary"
-          onClick={() => {
-            onClose();
-            onChangeCity();
-          }}
-        >
-          Change city / state
-        </button>
 
         <Link to="/profile/saved-addresses" className="hls-manage" onClick={onClose}>
           Manage or add addresses
@@ -194,17 +181,6 @@ export function HomeLocationSheet({
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-        .hls-secondary {
-          width: 100%;
-          min-height: 48px;
-          border-radius: 14px;
-          border: 1px solid #e2e8f0;
-          background: #fff;
-          font-weight: 700;
-          color: #334155;
-          margin-bottom: 10px;
-          cursor: pointer;
         }
         .hls-manage {
           display: block;

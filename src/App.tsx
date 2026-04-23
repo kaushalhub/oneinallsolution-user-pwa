@@ -26,6 +26,11 @@ import { ServiceDetailPage } from './pages/ServiceDetailPage';
 import { SplashPage } from './pages/SplashPage';
 import { WalletPage } from './pages/WalletPage';
 import { WalletTopupPage } from './pages/WalletTopupPage';
+import { MpLayout } from './marketplace/MpLayout';
+import { MpHomePage } from './marketplace/MpHomePage';
+import { MpServicePage } from './marketplace/MpServicePage';
+import { MpCheckoutPage } from './marketplace/MpCheckoutPage';
+import { MpConfirmPage } from './marketplace/MpConfirmPage';
 
 export default function App() {
   return (
@@ -68,6 +73,12 @@ export default function App() {
                 <Route path="/profile/saved-addresses" element={<SavedAddressesPage />} />
                 <Route path="/profile/referral" element={<ReferralPage />} />
                 <Route path="/profile/help-support" element={<HelpSupportPage />} />
+              </Route>
+              <Route path="/mp" element={<MpLayout />}>
+                <Route index element={<MpHomePage />} />
+                <Route path="service/:serviceId" element={<MpServicePage />} />
+                <Route path="checkout" element={<MpCheckoutPage />} />
+                <Route path="done" element={<MpConfirmPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { HomeLocationSheet } from '../components/HomeLocationSheet';
-import { RegionPickerModal } from '../components/RegionPickerModal';
 import { APP_PRODUCT_NAME } from '../constants/branding';
 import { Colors } from '../constants/theme';
 import { useCart } from '../context/CartContext';
@@ -49,13 +48,7 @@ function catalogIconLooksLikeSvg(resolvedUri: string): boolean {
 export function HomePage() {
   const navigate = useNavigate();
   const { itemCount } = useCart();
-  const {
-    catalogRegionLabel,
-    mode: regionMode,
-    indianStates,
-    setRegionPreference,
-    regionReady,
-  } = useCatalogRegion();
+  const { catalogRegionLabel, mode: regionMode, regionReady } = useCatalogRegion();
   const { coords: liveCoords, locationError: liveLocationError, accuracyMeters: liveAccuracyM } =
     useCurrentLocation();
 
@@ -68,7 +61,6 @@ export function HomePage() {
   const [repeatSessionChecked, setRepeatSessionChecked] = useState(false);
   const [userLoggedIn, setUserLoggedIn] = useState(false);
   const [headerElevated, setHeaderElevated] = useState(false);
-  const [regionOpen, setRegionOpen] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(false);
@@ -192,9 +184,7 @@ export function HomePage() {
 
   const openLocationEntry = useCallback(() => {
     void loadAddresses();
-    const s = getSession();
-    if (s?.token) setLocationSheetOpen(true);
-    else setRegionOpen(true);
+    setLocationSheetOpen(true);
   }, [loadAddresses]);
 
   const onSelectSheetAddress = useCallback(async (addr: UserAddress) => {
@@ -254,22 +244,6 @@ export function HomePage() {
                 );
               })}
             </div>
-            <button
-              type="button"
-              className="home-static-banner"
-              onClick={() => setRegionOpen(true)}
-              style={{ width: windowWidth }}
-            >
-              <div className="home-static-inner">
-                <div>
-                  <div className="home-static-title">Pin your service area</div>
-                  <div className="home-static-sub">Accurate slots & pricing for {APP_PRODUCT_NAME}</div>
-                </div>
-                <span className="home-static-cta">
-                  <IonIcon ionName="chevron-forward" size={16} color="#7c77b9" />
-                </span>
-              </div>
-            </button>
           </div>
 
           <div className="home-padded">
@@ -459,18 +433,6 @@ export function HomePage() {
         error={addressesErr}
         activeAddressId={activeAddr?._id ?? null}
         onSelectAddress={onSelectSheetAddress}
-        onChangeCity={() => setRegionOpen(true)}
-      />
-
-      <RegionPickerModal
-        open={regionOpen}
-        onClose={() => setRegionOpen(false)}
-        indianStates={indianStates}
-        onPickPinned={async ({ code, citySlug, cityLabel }) => {
-          await setRegionPreference({ mode: 'pinned', code, citySlug, cityLabel });
-          setRegionOpen(false);
-          await refreshCatalog();
-        }}
       />
 
       <style>{`
@@ -528,42 +490,6 @@ export function HomePage() {
           height: 140px;
           object-fit: cover;
           display: block;
-        }
-        .home-static-banner {
-          border: none;
-          background: transparent;
-          padding: 0 24px 18px;
-          text-align: left;
-        }
-        .home-static-inner {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 14px 16px;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.14);
-        }
-        .home-static-title {
-          font-size: 16px;
-          font-weight: 800;
-          color: #fff;
-          letter-spacing: -0.2px;
-        }
-        .home-static-sub {
-          margin-top: 6px;
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.88);
-          line-height: 17px;
-        }
-        .home-static-cta {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 40px;
-          height: 40px;
-          border-radius: 999px;
-          background: #fff;
         }
         .home-padded {
           padding: 12px 24px 20px;

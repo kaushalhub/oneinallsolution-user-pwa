@@ -113,13 +113,14 @@ export function WalletPage() {
             </div>
 
             {WALLET_TOPUP_VIA_PHONEPE_DISABLED ? (
-              <div className="wal-payCard wal-payCard--disabled" aria-disabled="true">
-                <IonIcon ionName="card-outline" size={22} color="#94a3b8" />
-                <div className="wal-payMid">
-                  <div className="wal-payTitle">Add money (UPI / card)</div>
-                  <div className="wal-paySub">Abhi band hai · checkout par COD use karein</div>
-                </div>
-              </div>
+              <></>
+              // <div className="wal-payCard wal-payCard--disabled" aria-disabled="true">
+              //   <IonIcon ionName="card-outline" size={22} color="#94a3b8" />
+              //   {/* <div className="wal-payMid">
+              //     <div className="wal-payTitle">Add money (UPI / card)</div>
+                  
+              //   </div> */}
+              // </div>
             ) : (
               <button type="button" className="wal-payCard" onClick={() => navigate('/wallet-topup')}>
                 <IonIcon ionName="card-outline" size={22} color="#7c77b9" />
