@@ -67,7 +67,7 @@ export function ServiceDetailPage() {
   }, []);
 
   const addToCart = useCallback(() => {
-    if (!data) return;
+    if (!data || grandTotal <= 0) return;
     addLine({
       slug: data.slug,
       title: data.title,
@@ -311,7 +311,12 @@ export function ServiceDetailPage() {
             <div className="svc-bar-label">Total</div>
             <div className="svc-bar-total">{formatRupeeInrWholeFloor(grandTotal)}</div>
           </div>
-          <button type="button" className="svc-add-cta" onClick={addToCart}>
+          <button
+            type="button"
+            className="svc-add-cta"
+            disabled={grandTotal <= 0}
+            onClick={addToCart}
+          >
             Add to cart
           </button>
         </div>
@@ -673,6 +678,12 @@ export function ServiceDetailPage() {
           color: #fff;
           font-weight: 800;
           font-size: 15px;
+        }
+        .svc-add-cta:disabled {
+          background: #cbd5e1;
+          color: #94a3b8;
+          cursor: not-allowed;
+          opacity: 0.85;
         }
         .svc-muted,
         .svc-err {

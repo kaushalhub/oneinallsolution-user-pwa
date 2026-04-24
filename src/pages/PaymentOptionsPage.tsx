@@ -16,7 +16,11 @@ import {
 import { getSession } from '../lib/session';
 import { fetchWalletBalance } from '../lib/wallet';
 import type { PaymentOptionsLocationState } from '../types/bookingFlow';
-import { computeCheckoutGstBreakdown } from '../utils/checkoutBill';
+import {
+  computeCheckoutGstBreakdown,
+  computeMultiCartPayable,
+  DEFAULT_CHECKOUT_GST_RATE,
+} from '../utils/checkoutBill';
 import {
   formatRupeeInr,
   formatRupeeInrDecimals,
@@ -126,6 +130,16 @@ export function PaymentOptionsPage() {
       }),
     [multi, cartLines, p]
   );
+
+  /** Multi-cart without per-line GST split: show 18% on ex-GST merchandise (matches basket / booking). */
+  const multiFlatGstDisplay = useMemo(() => {
+    if (!multi || !cartLines?.length) return null;
+    const mp = computeMultiCartPayable(cartLines);
+    if (mp.showSplit) return null;
+    const exAfterCoupon = appliedCoupon ? appliedCoupon.newTotal : subtotalBeforeDiscount;
+    const gst = roundMoney(exAfterCoupon * DEFAULT_CHECKOUT_GST_RATE);
+    return { gst };
+  }, [multi, cartLines, appliedCoupon, subtotalBeforeDiscount]);
 
   const baseBooking = useMemo(() => {
     if (!p) return null;
@@ -453,6 +467,28 @@ export function PaymentOptionsPage() {
                 <span className="pay-disc">-{formatRupeeInrDecimals(appliedCoupon.discountAmount)}</span>
               </div>
             ) : null}
+            <div className="pay-row pay-row-total">
+              <span>Total payable</span>
+              <span>{formatRupeeInrWholeFloor(payTotal)}</span>
+            </div>
+          </section>
+        ) : multiFlatGstDisplay ? (
+          <section className="pay-sum">
+            <h2 className="pay-sum-h">Price details</h2>
+            <div className="pay-row">
+              <span>Subtotal (ex GST)</span>
+              <span>{formatRupeeInrDecimals(subtotalBeforeDiscount)}</span>
+            </div>
+            {appliedCoupon ? (
+              <div className="pay-row">
+                <span>Coupon ({appliedCoupon.code})</span>
+                <span className="pay-disc">-{formatRupeeInrDecimals(appliedCoupon.discountAmount)}</span>
+              </div>
+            ) : null}
+            <div className="pay-row">
+              <span>GST ({Math.round(DEFAULT_CHECKOUT_GST_RATE * 100)}%)</span>
+              <span>{formatRupeeInrGstLine(multiFlatGstDisplay.gst)}</span>
+            </div>
             <div className="pay-row pay-row-total">
               <span>Total payable</span>
               <span>{formatRupeeInrWholeFloor(payTotal)}</span>

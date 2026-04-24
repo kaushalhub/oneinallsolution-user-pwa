@@ -2,14 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Colors } from '../constants/theme';
-import { useCart } from '../context/CartContext';
+import { useCart, type CartLine } from '../context/CartContext';
 import { useCatalogFetchQuery } from '../hooks/useCatalogFetchQuery';
 import { useDefaultUserAddress } from '../hooks/useDefaultUserAddress';
 import { fetchCatalogServices, type CatalogService } from '../lib/catalog';
 import { catalogServiceHeroImageUri } from '../utils/catalogServiceImage';
+import { computeMultiCartPayable } from '../utils/checkoutBill';
 import { formatRupeeInr } from '../utils/price';
 import { IonIcon } from '../utils/ionIcon';
 import type { BookingCartLine } from '../types/bookingFlow';
+
+function cartLineHint(item: CartLine): string {
+  const qty = item.quantity ?? 1;
+  const basePortion = item.basePrice * qty;
+  const hasAddons = item.lineTotal > basePortion;
+  if (!hasAddons) return 'Standard package';
+  if (item.basePrice <= 0) return 'Includes add-ons';
+  return `Includes add-ons · from ${formatRupeeInr(item.basePrice)} each`;
+}
 
 function RecCard({ service, onPress }: { service: CatalogService; onPress: () => void }) {
   const uri = catalogServiceHeroImageUri(service);
@@ -31,7 +41,7 @@ export function CartPage() {
   const navigate = useNavigate();
   const defaultAddr = useDefaultUserAddress();
   const catalogFetchQuery = useCatalogFetchQuery(defaultAddr);
-  const { lines, subtotal, removeLine, clearCart, itemCount } = useCart();
+  const { lines, removeLine, clearCart, itemCount } = useCart();
   const [catalog, setCatalog] = useState<CatalogService[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
 
@@ -61,6 +71,11 @@ export function CartPage() {
 
   const addonTotal = useMemo(
     () => lines.reduce((s, l) => s + Math.max(0, l.lineTotal - l.basePrice * (l.quantity ?? 1)), 0),
+    [lines]
+  );
+
+  const cartPay = useMemo(
+    () => (lines.length ? computeMultiCartPayable(lines as BookingCartLine[]) : null),
     [lines]
   );
 
@@ -95,7 +110,8 @@ export function CartPage() {
           <h1 className="cart-h1">Basket</h1>
           {itemCount > 0 ? (
             <p className="cart-sub">
-              {itemCount} item{itemCount === 1 ? '' : 's'} · {formatRupeeInr(subtotal)}
+              {itemCount} item{itemCount === 1 ? '' : 's'} ·{' '}
+              {formatRupeeInr(cartPay?.payableTotal ?? 0)}
             </p>
           ) : (
             <p className="cart-sub">Add what you need</p>
@@ -136,11 +152,7 @@ export function CartPage() {
                     {item.title}
                     {(item.quantity ?? 1) > 1 ? <span className="cart-line-qty"> ×{item.quantity}</span> : null}
                   </div>
-                  <div className="cart-line-hint">
-                    {item.lineTotal > item.basePrice * (item.quantity ?? 1)
-                      ? `Includes add-ons · from ${formatRupeeInr(item.basePrice)} each`
-                      : 'Standard package'}
-                  </div>
+                  <div className="cart-line-hint">{cartLineHint(item)}</div>
                 </div>
                 <div className="cart-line-right">
                   <span className="cart-pill">{formatRupeeInr(item.lineTotal)}</span>
@@ -184,9 +196,15 @@ export function CartPage() {
                 <span>{formatRupeeInr(addonTotal)}</span>
               </div>
             ) : null}
+            {cartPay && cartPay.gstLineAmount > 0 ? (
+              <div className="cart-sum-row">
+                <span>{cartPay.gstLabel}</span>
+                <span>{formatRupeeInr(cartPay.gstLineAmount)}</span>
+              </div>
+            ) : null}
             <div className="cart-sum-row cart-sum-total">
               <span>Total</span>
-              <span>{formatRupeeInr(subtotal)}</span>
+              <span>{formatRupeeInr(cartPay?.payableTotal ?? 0)}</span>
             </div>
             <button type="button" className="cart-checkout" onClick={checkout}>
               Proceed to book
@@ -345,14 +363,17 @@ export function CartPage() {
           font-weight: 800;
           color: #0f172a;
           font-size: 16px;
+          line-height: 1.3;
         }
         .cart-line-qty {
           font-weight: 800;
           color: #64748b;
         }
         .cart-line-hint {
-          margin-top: 4px;
+          margin-top: 6px;
           font-size: 13px;
+          font-weight: 600;
+          line-height: 1.4;
           color: #64748b;
         }
         .cart-line-right {

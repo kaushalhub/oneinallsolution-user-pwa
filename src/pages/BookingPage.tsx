@@ -15,6 +15,7 @@ import {
 } from '../lib/user';
 import type { BookingCartLine, PaymentOptionsLocationState } from '../types/bookingFlow';
 import { getNextBookingDays, monthYearLabel } from '../utils/bookingDates';
+import { computeMultiCartFinalPayTotal } from '../utils/checkoutBill';
 import { IonIcon } from '../utils/ionIcon';
 
 const TIME_SLOTS = ['09:00\nAM', '12:00 PM', '03:00 PM', '08:00 PM'];
@@ -47,7 +48,10 @@ export function BookingPage() {
     ? cartLines.map((l) => ((l.quantity ?? 1) > 1 ? `${l.title} ×${l.quantity}` : l.title)).join(' + ')
     : 'Service';
 
-  const totalPrice = multi ? cartLines.reduce((s, l) => s + l.lineTotal, 0) : 0;
+  const sumLineTotals = useMemo(
+    () => (multi ? cartLines.reduce((s, l) => s + l.lineTotal, 0) : 0),
+    [multi, cartLines]
+  );
 
   const bookingDays = useMemo(() => getNextBookingDays(10), []);
   const [selectedDate, setSelectedDate] = useState(() => bookingDays[0]?.id ?? '');
@@ -58,13 +62,16 @@ export function BookingPage() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponErr, setCouponErr] = useState<string | null>(null);
 
-  const subtotalBeforeDiscount = totalPrice;
-  const payTotal = appliedCoupon?.newTotal ?? totalPrice;
+  const subtotalBeforeDiscount = sumLineTotals;
+  const payTotal = useMemo(
+    () => (multi && cartLines.length ? computeMultiCartFinalPayTotal(cartLines, appliedCoupon) : 0),
+    [multi, cartLines, appliedCoupon]
+  );
 
   useEffect(() => {
     setAppliedCoupon(null);
     setCouponErr(null);
-  }, [totalPrice]);
+  }, [sumLineTotals]);
 
   const [token, setToken] = useState<string | null>(null);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
@@ -285,12 +292,12 @@ export function BookingPage() {
   };
 
   useEffect(() => {
-    if (!hasCart || totalPrice <= 0) {
+    if (!hasCart || sumLineTotals <= 0) {
       navigate('/cart', { replace: true });
     }
-  }, [hasCart, totalPrice, navigate]);
+  }, [hasCart, sumLineTotals, navigate]);
 
-  if (!hasCart || totalPrice <= 0) return null;
+  if (!hasCart || sumLineTotals <= 0) return null;
 
   const headerLocationText = selectedAddr
     ? [selectedAddr.city, selectedAddr.state].filter(Boolean).join(', ') ||
@@ -321,7 +328,7 @@ export function BookingPage() {
         <section className="bk-card">
           <h2 className="bk-h">Service</h2>
           <p className="bk-svc">{serviceLineTitle}</p>
-          <p className="bk-price">₹{Math.round(totalPrice).toLocaleString('en-IN')}</p>
+          <p className="bk-price">₹{Math.round(payTotal).toLocaleString('en-IN')}</p>
         </section>
 
         <section className="bk-card">

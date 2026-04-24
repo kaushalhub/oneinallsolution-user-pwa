@@ -81,3 +81,53 @@ export function computeCheckoutGstBreakdown(input: {
     addonsTotal: addons,
   };
 }
+
+/** When line items do not carry full GST split, basket amounts are treated as ex-GST and this rate is applied once. */
+export const DEFAULT_CHECKOUT_GST_RATE = 0.18;
+
+export type MultiCartPayable = {
+  sumLineTotals: number;
+  showSplit: boolean;
+  gstBill: CheckoutGstBreakdown;
+  /** GST amount shown on the GST row (service GST when split; 18% of basket when flat). */
+  gstLineAmount: number;
+  gstLabel: string;
+  /** Final amount due before coupons are applied in {@link computeMultiCartFinalPayTotal}. */
+  payableTotal: number;
+};
+
+export function computeMultiCartPayable(cartLines: BookingCartLine[]): MultiCartPayable {
+  const sumLineTotals = round2(cartLines.reduce((s, l) => s + l.lineTotal, 0));
+  const gstBill = computeCheckoutGstBreakdown({ multi: true, cartLines });
+  if (gstBill.showSplit && gstBill.gstPercentLabel > 0) {
+    return {
+      sumLineTotals,
+      showSplit: true,
+      gstBill,
+      gstLineAmount: gstBill.gstAmount,
+      gstLabel: `GST (${gstBill.gstPercentLabel}%)`,
+      payableTotal: sumLineTotals,
+    };
+  }
+  const gstLineAmount = round2(sumLineTotals * DEFAULT_CHECKOUT_GST_RATE);
+  return {
+    sumLineTotals,
+    showSplit: false,
+    gstBill,
+    gstLineAmount,
+    gstLabel: `GST (${Math.round(DEFAULT_CHECKOUT_GST_RATE * 100)}%)`,
+    payableTotal: round2(sumLineTotals + gstLineAmount),
+  };
+}
+
+export function computeMultiCartFinalPayTotal(
+  cartLines: BookingCartLine[],
+  appliedCoupon: { newTotal: number } | null
+): number {
+  const p = computeMultiCartPayable(cartLines);
+  if (p.showSplit) {
+    return appliedCoupon ? round2(appliedCoupon.newTotal) : p.payableTotal;
+  }
+  const ex = appliedCoupon ? round2(appliedCoupon.newTotal) : p.sumLineTotals;
+  return round2(ex + round2(ex * DEFAULT_CHECKOUT_GST_RATE));
+}
